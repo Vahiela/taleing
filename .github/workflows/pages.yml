@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       HUSKY: 0
@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/taleing/build-pages.sh
       - name: Test Pages assets and editor
         run: |
-          corepack yarn playwright install --with-deps chromium
+          corepack yarn playwright install --with-deps --only-shell chromium
           node scripts/taleing/smoke-pages.mjs
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

@@ -27,7 +27,7 @@ To compare the drawing format against the pinned upstream app, build a clean che
 
 Cloud Chromium verified drawing, selection, keyboard movement, undo and redo, keyboard clipboard shortcuts, image insertion, PNG and SVG downloads, refresh persistence, and offline reload. It also verified a version 1 library import and version 2 export, and both directions of drawing and library file exchange with the clean pinned Excalidraw build. The drawing round trip preserved element IDs, geometry, and the embedded image. The library round trip preserved its items. Project-path checks covered scripts, CSS, fonts, icons, manifest assets, the service worker, the export route, and the 404 page.
 
-Default-build tests confirmed that starting collaboration or exporting a share link without endpoints explains the missing service before creating a room or uploading a drawing. Live service and cross-browser verification are tracked separately below.
+Default-build tests confirmed that starting collaboration or exporting a share link without endpoints explains the missing service before creating a room or uploading a drawing. With a loopback test service, encrypted read-only links successfully transferred a drawing between two Chromium sessions. That test covered the scene protocol. Production image storage and service operation still require verification. Live service and cross-browser verification are tracked separately below.
 
 ## Hosted feature status
 
