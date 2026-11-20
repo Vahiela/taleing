@@ -342,6 +342,7 @@ export const TextToolButton = createToolButton("text");
 export const StickyNoteToolButton = createToolButton("stickynote");
 export const ImageToolButton = createToolButton("image");
 export const EraserToolButton = createToolButton("eraser");
+export const CutToolButton = createToolButton("cut");
 export const FrameToolButton = createToolButton("frame");
 
 /**

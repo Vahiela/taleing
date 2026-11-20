@@ -1,5 +1,12 @@
+import { simplify } from "points-on-curve";
+
 import { getSizeFromPoints, isTransparent } from "@excalidraw/common";
 import {
+  bezierEquation,
+  curveCatmullRomCubicApproxPoints,
+  curveClosestParameter,
+  curveIntersectLineSegment,
+  distanceToLineSegment,
   lineSegment,
   lineSegmentIntersectionPoints,
   pointDistance,
@@ -7,7 +14,7 @@ import {
   pointRotateRads,
 } from "@excalidraw/math";
 
-import type { GlobalPoint, LocalPoint } from "@excalidraw/math";
+import type { Curve, GlobalPoint, LocalPoint } from "@excalidraw/math";
 
 import { elementCenterPoint, getElementLineSegments } from "./bounds";
 import { getLinearElementCenterline } from "./bucketFill";
@@ -18,6 +25,8 @@ import {
 } from "./newElement";
 import { isArrowElement, isLineElement } from "./typeChecks";
 import { isPathALoop } from "./utils";
+
+import type { Point } from "points-on-curve";
 
 import type { ElementsMap, NonDeletedExcalidrawElement } from "./types";
 
@@ -81,7 +90,15 @@ const splitPath = (points: readonly GlobalPoint[], gesture: CutGesture) => {
     return null;
   }
 
-  const { index, t, point } = best;
+  return splitPathAt(points, best.index, best.t, best.point);
+};
+
+const splitPathAt = (
+  points: readonly GlobalPoint[],
+  index: number,
+  t: number,
+  point: GlobalPoint,
+) => {
   const left = points.slice(0, index + 1);
   const right = points.slice(index + 1);
   const appendLeft = pointDistance(left[left.length - 1], point) >= EPSILON;
@@ -99,11 +116,119 @@ const splitPath = (points: readonly GlobalPoint[], gesture: CutGesture) => {
   return { left, right, index, t, appendLeft, prependRight };
 };
 
+/**
+ * Use the native spline for hit testing and retain its original edit points.
+ * A single extra point per side near the cut can preserve a bend that would
+ * otherwise disappear when the native renderer refits the shorter spline.
+ */
+const splitRoundedPath = (points: GlobalPoint[], gesture: CutGesture) => {
+  // RoughJS uses the default Catmull–Rom tangents at zero curve tightness.
+  const curves = curveCatmullRomCubicApproxPoints(points)!;
+  const blade = gesture.end ? lineSegment(gesture.start, gesture.end) : null;
+  let best:
+    | { index: number; t: number; point: GlobalPoint; distance: number }
+    | undefined;
+  for (const [index, segment] of curves.entries()) {
+    const clickT = blade
+      ? 0
+      : curveClosestParameter(segment, gesture.start, EPSILON);
+    const hits = blade
+      ? curveIntersectLineSegment(segment, blade, {
+          tolerance: EPSILON,
+          iterLimit: 16,
+        })
+      : [segment[0], bezierEquation(segment, clickT), segment[3]];
+    // A crossing directly at a knot may be just outside Newton's interval.
+    if (blade) {
+      for (const knot of [segment[0], segment[3]]) {
+        if (distanceToLineSegment(knot, blade) < EPSILON) {
+          hits.push(knot);
+        }
+      }
+    }
+    for (const hit of hits) {
+      const distance = pointDistance(hit, gesture.start);
+      if (
+        (!blade && distance > gesture.tolerance) ||
+        (best && distance >= best.distance)
+      ) {
+        continue;
+      }
+      const t =
+        pointDistance(hit, segment[0]) < EPSILON
+          ? 0
+          : pointDistance(hit, segment[3]) < EPSILON
+          ? 1
+          : blade
+          ? curveClosestParameter(segment, hit, EPSILON)
+          : clickT;
+      best = {
+        index,
+        t,
+        point: t === 0 ? segment[0] : t === 1 ? segment[3] : hit,
+        distance,
+      };
+    }
+  }
+  if (!best) {
+    return null;
+  }
+
+  const { index, t, point } = best;
+  const pieces = splitPathAt(points, index, t, point);
+  if (!pieces) {
+    return null;
+  }
+
+  const addBend = (
+    segment: Curve<GlobalPoint>,
+    from: number,
+    to: number,
+    otherEnd: GlobalPoint,
+    path: GlobalPoint[],
+    insertionIndex: number,
+  ) => {
+    const chord = lineSegment(point, otherEnd);
+    // Try both ends of the interval. An S-shaped segment can cross its chord
+    // in the middle even when the surrounding curve visibly departs from it.
+    const earlier = bezierEquation(segment, (2 * from + to) / 3);
+    const later = bezierEquation(segment, (from + 2 * to) / 3);
+    const earlierDeviation = distanceToLineSegment(earlier, chord);
+    const laterDeviation = distanceToLineSegment(later, chord);
+    if (Math.max(earlierDeviation, laterDeviation) > 0.25) {
+      path.splice(
+        insertionIndex,
+        0,
+        earlierDeviation > laterDeviation ? earlier : later,
+      );
+    }
+  };
+  const { left, right, appendLeft, prependRight } = pieces;
+  addBend(
+    curves[appendLeft ? index : index - 1],
+    0,
+    appendLeft ? t : 1,
+    left[left.length - 2],
+    left,
+    left.length - 1,
+  );
+  addBend(
+    curves[prependRight ? index : index + 1],
+    prependRight ? t : 0,
+    1,
+    right[1],
+    right,
+    1,
+  );
+  return pieces;
+};
+
 /** Split a ring with exactly two crossings so each side is one editable polygon. */
 const splitRing = (
   ring: readonly GlobalPoint[],
   start: GlobalPoint,
   end: GlobalPoint,
+  simplifyOutline: boolean,
 ) => {
   const length = pointDistance(start, end);
   if (length < EPSILON) {
@@ -159,7 +284,25 @@ const splitRing = (
     return null;
   }
 
-  return [left, right].map((points) => [...points, points[0]]);
+  return [left, right].map((points) => {
+    if (!simplifyOutline) {
+      return [...points, points[0]];
+    }
+    // Put the two ends of the new seam at the ends of the open outline
+    // before simplifying so both are kept exactly where the blade crossed.
+    const first = points.indexOf(crossings[0]);
+    const second = points.indexOf(crossings[1]);
+    const startIndex = (first + 1) % points.length === second ? second : first;
+    const outline = [
+      ...points.slice(startIndex),
+      ...points.slice(0, startIndex),
+    ];
+    const compact = simplify(outline as unknown as Point[], 0.5).map(([x, y]) =>
+      pointFrom<GlobalPoint>(x, y),
+    );
+    const retained = compact.length >= 3 ? compact : outline;
+    return [...retained, retained[0]];
+  });
 };
 
 const shapeOutline = (
@@ -244,7 +387,12 @@ export const cutElement = (
       pointDistance(points[0], points[points.length - 1]) < EPSILON
         ? points.slice(0, -1)
         : points;
-    const pieces = splitRing(ring, gesture.start, gesture.end);
+    const pieces = splitRing(
+      ring,
+      gesture.start,
+      gesture.end,
+      element.roundness != null || element.type === "ellipse",
+    );
     return (
       pieces?.map((piece) =>
         newLinearElement({
@@ -277,22 +425,25 @@ export const cutElement = (
   }
 
   const center = elementCenterPoint(element, elementsMap);
-  const points =
-    element.type === "freedraw"
-      ? element.points.map((point) =>
-          pointRotateRads(
-            pointFrom<GlobalPoint>(element.x + point[0], element.y + point[1]),
-            center,
-            element.angle,
-          ),
-        )
-      : getLinearElementCenterline(element, elementsMap);
-  const pieces = splitPath(points, gesture);
+  const points = element.points.map((point) =>
+    pointRotateRads(
+      pointFrom<GlobalPoint>(element.x + point[0], element.y + point[1]),
+      center,
+      element.angle,
+    ),
+  );
+  const pieces =
+    element.type !== "freedraw" && element.roundness && points.length > 2
+      ? splitRoundedPath(points, gesture)
+      : splitPath(points, gesture);
   if (!pieces) {
     return null;
   }
 
-  const halves = [makeGeometry(pieces.left), makeGeometry(pieces.right)];
+  const halves = [pieces.left, pieces.right].map((points) => ({
+    ...makeGeometry(points),
+    roundness: element.roundness,
+  }));
   if (element.type === "freedraw") {
     const { index, t, appendLeft, prependRight } = pieces;
     const pressures = [[], []] as [number[], number[]];

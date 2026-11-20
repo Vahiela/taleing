@@ -190,8 +190,7 @@ try {
   await drag(cutPage, [350, 300], [650, 300]);
   await waitForCount(cutPage, 1);
   const [originalLine] = await activeScene(cutPage);
-  await cutPage.getByTitle("More tools", { exact: true }).click();
-  await cutPage.getByTestId("toolbar-cut").click();
+  await cutPage.locator(".App-toolbar").getByTestId("toolbar-cut").click();
   await cutPage.mouse.click(500, 300);
   await waitForCount(cutPage, 2);
   const halves = await activeScene(cutPage);
@@ -220,10 +219,47 @@ try {
     assert.equal(polygon.type, "line");
     assert.deepEqual(polygon.points[0], polygon.points.at(-1));
   }
+  await cutPage.keyboard.press("l");
+  await cutPage.mouse.click(740, 425);
+  await cutPage.mouse.move(820, 505);
+  await cutPage.mouse.click(820, 505);
+  await cutPage.mouse.move(900, 425);
+  await cutPage.mouse.click(900, 425);
+  await cutPage.keyboard.press("Enter");
+  await waitForCount(cutPage, 5);
+  const curve = (await activeScene(cutPage)).at(-1);
+  assert.equal(curve.points.length, 3);
+  assert(curve.roundness);
+  await cutPage.getByRole("button", { name: "Cut", exact: true }).click();
+  await drag(cutPage, [775, 405], [775, 525]);
+  await waitForCount(cutPage, 6);
+  const curvePieces = (await activeScene(cutPage)).slice(-2);
+  for (const piece of curvePieces) {
+    assert.deepEqual(piece.roundness, curve.roundness);
+  }
+  assert(curvePieces.reduce((count, el) => count + el.points.length, 0) <= 7);
   await cutPage.context().close();
   console.log(
-    "Cut toolbar, shortcut, line and shape splitting, and undo/redo passed",
+    "Cut toolbar, shortcut, rounded lines, shape splitting, and undo/redo passed",
   );
+
+  const phone = await browser.newContext({
+    locale: "en-US",
+    viewport: { width: 320, height: 720 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  try {
+    const phonePage = await phone.newPage();
+    await phonePage.goto(taleing, { waitUntil: "domcontentloaded" });
+    const cut = phonePage
+      .locator(".mobile-toolbar")
+      .getByRole("button", { name: "Cut", exact: true });
+    await cut.tap();
+    assert.equal(await cut.getAttribute("aria-pressed"), "true");
+  } finally {
+    await phone.close();
+  }
 
   const selectMenu = async (tab, testId) => {
     const item = tab.getByTestId(testId);

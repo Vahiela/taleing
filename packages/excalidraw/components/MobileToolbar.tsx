@@ -10,6 +10,7 @@ import { useTunnels } from "../context/tunnels";
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { ToolPopover } from "./ToolPopover";
 import {
+  CutToolButton,
   EraserToolButton,
   FrameToolButton,
   FreedrawToolPopover,
@@ -31,7 +32,6 @@ import {
   laserPointerToolIcon,
   drawShapeToolIcon,
   bucketFillIcon,
-  cutIcon,
   mermaidLogoIcon,
   MagicIcon,
   stickyNoteToolIcon,
@@ -80,7 +80,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
   const laserToolSelected = activeTool.type === "laser";
   const embeddableToolSelected = activeTool.type === "embeddable";
   const bucketFillToolSelected = activeTool.type === "bucketfill";
-  const cutToolSelected = activeTool.type === "cut";
   const stickyNoteToolSelected = activeTool.type === "stickynote";
 
   const { TTDDialogTriggerTunnel } = useTunnels();
@@ -106,8 +105,8 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
   const WIDTH = 36;
   const GAP = 4;
 
-  // hand, selection, freedraw, eraser, rectangle, arrow, others
-  const MIN_TOOLS = 7;
+  // hand, selection, freedraw, eraser, cut, rectangle, arrow, others
+  const MIN_TOOLS = 8;
   const MIN_WIDTH = MIN_TOOLS * WIDTH + (MIN_TOOLS - 1) * GAP;
   const ADDITIONAL_WIDTH = WIDTH + GAP;
 
@@ -123,7 +122,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
       "embeddable",
       "laser",
       "bucketfill",
-      "cut",
       "magicframe",
     ] as const
   ).filter((tool) => {
@@ -151,8 +149,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
       ? laserPointerToolIcon
       : activeTool.type === "bucketfill"
       ? bucketFillIcon
-      : activeTool.type === "cut"
-      ? cutIcon
       : activeTool.type === "magicframe"
       ? MagicIcon
       : DotsIcon
@@ -180,6 +176,7 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
 
       {/* Eraser */}
       <EraserToolButton {...toolProps} hideShortcut />
+      <CutToolButton {...toolProps} hideShortcut />
 
       {/* Rectangle/Diamond/Ellipse */}
       <ToolPopover
@@ -349,16 +346,6 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
             disabled={isToolButtonDisabled(app, "bucketfill")}
           >
             {t("toolBar.bucketfill")}
-          </DropdownMenu.Item>
-          <DropdownMenu.Item
-            onSelect={() => app.setActiveTool({ type: "cut" })}
-            icon={cutIcon}
-            data-testid="toolbar-cut"
-            selected={cutToolSelected}
-            shortcut={getToolShortcut("cut")}
-            disabled={isToolButtonDisabled(app, "cut")}
-          >
-            {t("toolBar.cut")}
           </DropdownMenu.Item>
           <div style={{ margin: "6px 0", fontSize: 14, fontWeight: 600 }}>
             Generate

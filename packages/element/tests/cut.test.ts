@@ -1,3 +1,4 @@
+import { ROUNDNESS } from "@excalidraw/common";
 import { pointFrom } from "@excalidraw/math";
 import { describe, expect, it } from "vitest";
 
@@ -65,6 +66,36 @@ describe("cutElement", () => {
     expect(cut(line, global(70, -30))).toBeNull();
   });
 
+  it.each(["click", "drag", "knot"] as const)(
+    "preserves rounded edit points when cutting by %s",
+    (gesture) => {
+      const line = newLinearElement({
+        ...style,
+        type: "line",
+        width: 160,
+        height: 90,
+        roundness: { type: ROUNDNESS.PROPORTIONAL_RADIUS },
+        points: [local(0, 0), local(80, 90), local(160, 0)],
+      });
+      // Midpoint of the first native spline segment, away from its chord.
+      const target = gesture === "knot" ? global(100, 110) : global(55, 70.625);
+      const pieces =
+        gesture === "drag"
+          ? cut(line, global(target[0], 40), global(target[0], 95))
+          : cut(line, target);
+      expect(pieces).toHaveLength(2);
+      const [first, second] = pieces!.filter(isLineElement);
+      expect(first.roundness).toEqual(line.roundness);
+      expect(second.roundness).toEqual(line.roundness);
+      expect(first.points.length).toBeGreaterThanOrEqual(3);
+      expect(first.points.length + second.points.length).toBeLessThanOrEqual(7);
+      expect(second.x).toBeCloseTo(target[0], 2);
+      expect(second.y).toBeCloseTo(target[1], 2);
+      expect(first.x + first.points.at(-1)![0]).toBeCloseTo(second.x, 6);
+      expect(first.y + first.points.at(-1)![1]).toBeCloseTo(second.y, 6);
+    },
+  );
+
   it.each(["rectangle", "diamond", "ellipse"] as const)(
     "splits a filled %s into closed, styled line polygons",
     (type) => {
@@ -77,6 +108,9 @@ describe("cutElement", () => {
         if (isLineElement(piece)) {
           expect(piece.polygon).toBe(true);
           expect(piece.points.at(-1)).toEqual(piece.points[0]);
+          if (type === "ellipse") {
+            expect(piece.points.length).toBeLessThan(24);
+          }
           expect(Math.abs(piece.width - 50)).toBeLessThan(1);
         }
         expect(piece.backgroundColor).toBe(shape.backgroundColor);
