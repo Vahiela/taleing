@@ -50,6 +50,7 @@ import type {
   ExcalidrawElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLineElement,
+  ExcalidrawLinearElement,
   NonDeletedExcalidrawElement,
 } from "./types";
 
@@ -331,13 +332,12 @@ const subtractIntervals = (
  * stroke on top). It also makes line endpoints genuine degree-1 graph
  * nodes, which is what the bridging pass keys on.
  *
- * Curved (`roundness`) lines deviate slightly at bends since the points are
- * the pre-smoothing polyline; the stroke width hides it.
+ * Rounded paths are sampled from the same curve fit as the renderer.
  */
-const lineElementIdealSegments = (
-  element: ExcalidrawLineElement,
+export const getLinearElementCenterline = (
+  element: ExcalidrawLinearElement,
   elementsMap: ElementsMap,
-): LineSegment<GlobalPoint>[] => {
+): GlobalPoint[] => {
   const center = elementCenterPoint(element, elementsMap);
   // curved (`roundness`) lines render a smooth curve fitted through the
   // points — sample that same fit (curveToBezier is what roughjs' curve op
@@ -354,18 +354,21 @@ const lineElementIdealSegments = (
           BUCKET_FILL_CURVE_MAX_DEVIATION,
         ) as unknown as readonly LocalPoint[])
       : element.points;
-  const points = localPoints.map((point) =>
+  return localPoints.map((point) =>
     pointRotateRads(
       pointFrom<GlobalPoint>(element.x + point[0], element.y + point[1]),
       center,
       element.angle,
     ),
   );
-  const segments: LineSegment<GlobalPoint>[] = [];
-  for (let i = 0; i < points.length - 1; i++) {
-    segments.push(lineSegment(points[i], points[i + 1]));
-  }
-  return segments;
+};
+
+const lineElementIdealSegments = (
+  element: ExcalidrawLineElement,
+  elementsMap: ElementsMap,
+): LineSegment<GlobalPoint>[] => {
+  const points = getLinearElementCenterline(element, elementsMap);
+  return points.slice(1).map((point, i) => lineSegment(points[i], point));
 };
 
 /**

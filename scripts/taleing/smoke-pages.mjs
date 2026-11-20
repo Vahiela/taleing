@@ -185,6 +185,46 @@ try {
     "Drawing, selection, keyboard movement, undo/redo, and clipboard passed",
   );
 
+  const cutPage = await open(taleing);
+  await cutPage.keyboard.press("l");
+  await drag(cutPage, [350, 300], [650, 300]);
+  await waitForCount(cutPage, 1);
+  const [originalLine] = await activeScene(cutPage);
+  await cutPage.getByTitle("More tools", { exact: true }).click();
+  await cutPage.getByTestId("toolbar-cut").click();
+  await cutPage.mouse.click(500, 300);
+  await waitForCount(cutPage, 2);
+  const halves = await activeScene(cutPage);
+  assert(halves.every((el) => el.type === "line" && !el.polygon));
+  const seamX = originalLine.x + originalLine.width / 2;
+  assert.equal(halves[0].x + halves[0].points.at(-1)[0], seamX);
+  assert.equal(halves[1].x, seamX);
+  await cutPage.keyboard.press("Control+z");
+  await waitForCount(cutPage, 1);
+  assert.equal((await activeScene(cutPage))[0].id, originalLine.id);
+  await cutPage.keyboard.press("Control+Shift+z");
+  await waitForCount(cutPage, 2);
+  await cutPage.keyboard.press("r");
+  await drag(cutPage, [400, 400], [600, 550]);
+  await waitForCount(cutPage, 3);
+  await cutPage.keyboard.press("Shift+c");
+  // Starting inside the rectangle must leave it alone.
+  await drag(cutPage, [500, 450], [500, 590]);
+  // A full crossing should cut the rectangle, while leaving both line
+  // segments in place.
+  await drag(cutPage, [500, 370], [500, 590]);
+  await waitForCount(cutPage, 4);
+  const polygons = (await activeScene(cutPage)).filter((el) => el.polygon);
+  assert.equal(polygons.length, 2);
+  for (const polygon of polygons) {
+    assert.equal(polygon.type, "line");
+    assert.deepEqual(polygon.points[0], polygon.points.at(-1));
+  }
+  await cutPage.context().close();
+  console.log(
+    "Cut toolbar, shortcut, line and shape splitting, and undo/redo passed",
+  );
+
   const selectMenu = async (tab, testId) => {
     const item = tab.getByTestId(testId);
     if (!(await item.isVisible())) {

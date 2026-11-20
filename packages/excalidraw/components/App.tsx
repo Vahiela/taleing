@@ -387,6 +387,7 @@ import { AppClipboard } from "./App.clipboard";
 import { AppText } from "./App.text";
 import { AppTextTool } from "./App.textTool";
 import { AppBucketFill } from "./App.bucketFill";
+import { AppCut } from "./App.cut";
 import { AppToolDrag, TOOL_DRAG_PREVIEW_OPACITY } from "./App.toolDrag";
 import { AppCursor } from "./App.cursor";
 import { AppDrawShape } from "./App.drawshape";
@@ -682,6 +683,7 @@ class App extends React.Component<AppProps, AppState> {
   public onStateChange: OnStateChange = this.appStateObserver.onStateChange;
 
   public bucketFill: AppBucketFill = new AppBucketFill(this);
+  private cutTool = new AppCut(this);
   public duplicate: AppDuplicate = new AppDuplicate(this, {
     getPointerCount: () => gesture.pointers.size,
   });
@@ -3959,6 +3961,7 @@ class App extends React.Component<AppProps, AppState> {
     this.drawShape.stop();
     this.toolDrag.cancel();
     this.eraserTrail.stop();
+    this.cutTool.cancel();
     this.onChangeEmitter.clear();
     this.store.onStoreIncrementEmitter.clear();
     this.store.onDurableIncrementEmitter.clear();
@@ -4401,6 +4404,13 @@ class App extends React.Component<AppProps, AppState> {
       this.cursor.applyForTool();
     }
 
+    if (
+      prevState.activeTool.type === TOOL_TYPE.cut &&
+      this.state.activeTool.type !== TOOL_TYPE.cut
+    ) {
+      this.cutTool.cancel();
+    }
+
     // Hide hyperlink popup if shown when element type is not selection
     if (
       prevState.activeTool.type === "selection" &&
@@ -4761,6 +4771,7 @@ class App extends React.Component<AppProps, AppState> {
       // the gesture has queued, and with the click still pending that move
       // would resolve it as a drag.
       this.bucketFill.cancel();
+      this.cutTool.cancel();
       this.textTool.cancel();
     }
 
@@ -7906,6 +7917,8 @@ class App extends React.Component<AppProps, AppState> {
       // mode this branch is unreachable:
       // `pan.start` swallows the pointer-down.
       this.bucketFill.handlePointerDown(scenePointer);
+    } else if (this.state.activeTool.type === TOOL_TYPE.cut) {
+      this.cutTool.handlePointerDown(event);
     } else if (
       this.state.activeTool.type !== "eraser" &&
       this.state.activeTool.type !== "hand" &&
@@ -9000,6 +9013,10 @@ class App extends React.Component<AppProps, AppState> {
       if (this.state.openDialog?.name === "elementLinkSelector") {
         return;
       }
+      if (this.state.activeTool.type === TOOL_TYPE.cut) {
+        this.cutTool.handlePointerMove(event);
+        return;
+      }
       const pointerCoords = viewportCoordsToSceneCoords(event, this.state);
 
       if (this.state.activeLockedId) {
@@ -9486,6 +9503,14 @@ class App extends React.Component<AppProps, AppState> {
         this.bucketFill.handlePointerUp();
       } else {
         this.bucketFill.cancel();
+      }
+      if (
+        childEvent.type === "pointerup" &&
+        this.state.activeTool.type === TOOL_TYPE.cut
+      ) {
+        this.cutTool.handlePointerUp(childEvent);
+      } else {
+        this.cutTool.cancel();
       }
       const {
         newElement,
@@ -10271,9 +10296,9 @@ class App extends React.Component<AppProps, AppState> {
         childEvent.type === "pointerup" &&
         !this.isToolLocked() &&
         activeTool.type !== "freedraw" &&
-        // bucket fill stays active for back-to-back fills regardless of the
-        // tool lock (paint-bucket UX)
+        // Fill and cut stay active for repeated edits, even without tool lock.
         activeTool.type !== TOOL_TYPE.bucketfill &&
+        activeTool.type !== TOOL_TYPE.cut &&
         (activeTool.type !== "lasso" ||
           // if lasso is turned on but from selection => reset to selection
           (activeTool.type === "lasso" && activeTool.fromSelection))
@@ -11046,9 +11071,9 @@ class App extends React.Component<AppProps, AppState> {
       return;
     }
 
-    // a context menu during a press (touch long-press) means the user is
-    // not committing a bucket click
+    // A touch long-press opens the menu instead of editing the scene.
     this.bucketFill.cancel();
+    this.cutTool.cancel();
 
     if (
       (pointer.pointerType === "touch" ||

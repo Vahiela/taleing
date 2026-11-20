@@ -70,6 +70,10 @@ const getHints = ({
     });
   }
 
+  if (activeTool.type === "cut") {
+    return t("hints.cut");
+  }
+
   const selectedElements = app.scene.getSelectedElements(appState);
 
   // creating or dragging arrow point

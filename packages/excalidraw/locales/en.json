@@ -351,6 +351,7 @@
     "laser": "Laser pointer",
     "autoshape": "Draw to shape",
     "bucketfill": "Bucket fill",
+    "cut": "Cut",
     "hand": "Hand (panning tool)",
     "extraTools": "More tools",
     "mermaidToExcalidraw": "Mermaid to Excalidraw",
@@ -383,6 +384,7 @@
     "shapes": "Shapes"
   },
   "hints": {
+    "cut": "Click a stroke to split it, or drag across a shape to cut it in two",
     "dismissSearch": "{{shortcut}} to dismiss search",
     "canvasPanning": "To move canvas, hold {{shortcut_1}} or {{shortcut_2}} while dragging, or use the hand tool",
     "linearElement": "Click to start multiple points, drag for single line",
