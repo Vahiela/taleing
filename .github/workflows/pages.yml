@@ -3,7 +3,6 @@ name: Taleing Pages
 on:
   push:
     branches: [main]
-    paths-ignore: [taleing-import.patch]
   pull_request:
   workflow_dispatch:
 

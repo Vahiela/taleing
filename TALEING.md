@@ -19,9 +19,15 @@ node scripts/taleing/smoke-pages.mjs
 
 The pinned clean checkout and the Taleing tree passed typechecking, the production build, and 2,715 upstream tests across 154 files. The suite also reported 47 skipped tests and one todo.
 
-The production site is generated at `excalidraw-app/build` and served under `/taleing/`. The GitHub Pages source is **GitHub Actions**. Pushes to `main` run the tests, build, deployment, and public HTTP checks. Pull requests run the build and tests. The workflow also supports manual runs. [GitHub Pages settings](https://github.com/Vahiela/taleing/settings/pages)
+The production site is generated at `excalidraw-app/build` and served under `/taleing/`. The GitHub Pages source is **GitHub Actions**. Pushes to `main` run the tests, build, deployment, and public HTTP checks. Pull requests run the build and tests. The workflow also supports manual runs. The first successful deployment and public response check publish the `v0.1.0` baseline release. [GitHub Pages settings](https://github.com/Vahiela/taleing/settings/pages)
 
-To compare the drawing format against the pinned upstream app, build a clean checkout of that commit with `corepack yarn build:app:docker`, then set `TALEING_UPSTREAM_BUILD` to the absolute path of its `excalidraw-app/build` before running the smoke test. It imports a Taleing drawing in the upstream app, exports it there, and imports it back into Taleing. Set `TALEING_SMOKE_URL` to exercise a deployed Taleing URL.
+To compare the drawing format against the pinned upstream app, build a clean checkout of that commit with `corepack yarn build:app:docker`, then set `TALEING_UPSTREAM_BUILD` to the absolute path of its `excalidraw-app/build` before running the smoke test. It imports a Taleing drawing and library in the upstream app, exports them there, and imports them back into Taleing. Set `TALEING_SMOKE_URL` to exercise a deployed Taleing URL.
+
+## Browser verification
+
+Cloud Chromium verified drawing, selection, keyboard movement, undo and redo, keyboard clipboard shortcuts, image insertion, PNG and SVG downloads, refresh persistence, and offline reload. It also verified a version 1 library import and version 2 export, and both directions of drawing and library file exchange with the clean pinned Excalidraw build. The drawing round trip preserved element IDs, geometry, and the embedded image. The library round trip preserved its items. Project-path checks covered scripts, CSS, fonts, icons, manifest assets, the service worker, the export route, and the 404 page.
+
+Default-build tests confirmed that starting collaboration or exporting a share link without endpoints explains the missing service before creating a room or uploading a drawing. Live service and cross-browser verification are tracked separately below.
 
 ## Hosted feature status
 

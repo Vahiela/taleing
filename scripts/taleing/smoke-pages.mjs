@@ -93,6 +93,10 @@ try {
     /Copyright \(c\) 2020 Excalidraw/,
   );
   assert.equal((await request.get(taleing + "version.json")).status(), 200);
+  assert.match(
+    await (await request.get(taleing + "sitemap.xml")).text(),
+    /<loc>https:\/\/vahiela\.github\.io\/taleing\/?<\/loc>/,
+  );
   assert.equal(
     (await request.get(taleing + "excalidraw-plus-export/")).status(),
     200,
@@ -301,6 +305,38 @@ try {
     "Legacy library import, current library export, and library persistence passed",
   );
 
+  if (!process.env.TALEING_SMOKE_URL && !process.env.VITE_APP_WS_SERVER_URL) {
+    await page.getByTestId("main-menu-trigger").click();
+    await page.getByText("Live collaboration...", { exact: true }).click();
+    await page.getByRole("button", { name: "Start session" }).click();
+    await page
+      .getByText("Live collaboration is unavailable", { exact: false })
+      .waitFor();
+    assert.equal(new URL(page.url()).hash, "");
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    console.log(
+      "Unconfigured collaboration reports its status before creating a room",
+    );
+  }
+
+  if (
+    !process.env.TALEING_SMOKE_URL &&
+    !process.env.VITE_APP_BACKEND_V2_POST_URL
+  ) {
+    const sharing = await open(taleing);
+    await importFile(sharing, { ...sceneFile, mimeType: "application/json" });
+    await waitForCount(sharing, savedElements.length);
+    await selectMenu(sharing, "json-export-button");
+    await sharing.getByRole("button", { name: "Export to Link" }).click();
+    await sharing
+      .getByText("Shareable links are unavailable", { exact: false })
+      .waitFor();
+    console.log(
+      "Unconfigured sharing reports its status without uploading the drawing",
+    );
+  }
+
   if (upstreamBuild) {
     const upstream = await open(origin + "/");
     await importFile(upstream, { ...sceneFile, mimeType: "application/json" });
@@ -332,8 +368,26 @@ try {
         })),
       );
     }
+    assert.equal(
+      JSON.parse(upstreamFile.buffer).files[image.fileId].dataURL,
+      saved.files[image.fileId].dataURL,
+    );
+    await importLibrary(upstream, {
+      ...libraryFile,
+      mimeType: "application/json",
+    });
+    const upstreamLibrary = await exportLibrary(upstream);
+    await importLibrary(reimport, {
+      ...upstreamLibrary,
+      mimeType: "application/json",
+    });
+    const reimportedLibrary = await exportLibrary(reimport);
+    assert.deepEqual(
+      JSON.parse(reimportedLibrary.buffer).libraryItems,
+      JSON.parse(libraryFile.buffer).libraryItems,
+    );
     console.log(
-      "Two-way scene file round trip with the pinned upstream app passed",
+      "Two-way drawing and library round trips with the pinned upstream app passed",
     );
   }
 } finally {
