@@ -1,0 +1,92 @@
+name: Taleing Pages
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: [taleing-import.patch]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: taleing-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HUSKY: 0
+      VITE_APP_BACKEND_V2_GET_URL: ${{ vars.VITE_APP_BACKEND_V2_GET_URL }}
+      VITE_APP_BACKEND_V2_POST_URL: ${{ vars.VITE_APP_BACKEND_V2_POST_URL }}
+      VITE_APP_WS_SERVER_URL: ${{ vars.VITE_APP_WS_SERVER_URL }}
+      VITE_APP_FIREBASE_CONFIG: ${{ vars.VITE_APP_FIREBASE_CONFIG || '{}' }}
+      VITE_APP_AI_BACKEND: ${{ vars.VITE_APP_AI_BACKEND }}
+      VITE_APP_LIBRARY_BACKEND: ${{ vars.VITE_APP_LIBRARY_BACKEND }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.22.3
+      - name: Install locked dependencies
+        run: corepack yarn install --frozen-lockfile --non-interactive
+      - name: Typecheck
+        run: corepack yarn test:typecheck
+      - name: Run upstream tests
+        run: corepack yarn test:app run --maxWorkers=3 --minWorkers=1
+      - name: Build Taleing
+        run: bash scripts/taleing/build-pages.sh
+      - name: Test Pages assets and editor
+        run: |
+          corepack yarn playwright install --with-deps chromium
+          node scripts/taleing/smoke-pages.mjs
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: excalidraw-app/build
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Verify public response
+        run: |
+          site=https://vahiela.github.io/taleing/
+          curl --fail --silent --show-error --retry 5 --retry-all-errors "${site}version.json" |
+            jq -e --arg sha "$GITHUB_SHA" '.version | split("-")[-1] as $prefix | $sha | startswith($prefix)'
+          curl --fail --silent --show-error --retry 5 --retry-all-errors "${site}manifest.webmanifest" |
+            jq -e '.start_url == "/taleing/"'
+          curl --fail --silent --show-error --retry 5 --retry-all-errors "$site" |
+            grep -F "<title>Taleing Whiteboard</title>" >/dev/null
+
+  release:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Publish the first verified baseline
+        run: |
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            exit 0
+          fi
+          gh release create v0.1.0 --target "$GITHUB_SHA" \
+            --title "Taleing 0.1.0 baseline" \
+            --notes "The initial Taleing deployment, based on Excalidraw 2c3dcc06ec807e81ab9437eceb1a8f7a3c590743. See TALEING.md for compatibility and hosted-service status."
