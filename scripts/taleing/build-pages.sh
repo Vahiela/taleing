@@ -10,9 +10,8 @@ corepack yarn build:app:docker
 corepack yarn build:version
 
 build=excalidraw-app/build
-mkdir -p "$build/excalidraw-plus-export" "$build/licenses"
+mkdir -p "$build/licenses"
 sed -i 's|href="/sitemap.xml"|href="/taleing/sitemap.xml"|' "$build/index.html"
-cp "$build/index.html" "$build/excalidraw-plus-export/index.html"
 cp LICENSE "$build/LICENSE"
 cp packages/laser-pointer/LICENSE "$build/licenses/laser-pointer.txt"
 sed -i \

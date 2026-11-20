@@ -24,11 +24,13 @@ export const LibraryMenuControlButtons = ({
       className={clsx("library-menu-control-buttons", className)}
       style={style}
     >
-      <LibraryMenuBrowseButton
-        id={id}
-        libraryReturnUrl={libraryReturnUrl}
-        theme={theme}
-      />
+      {import.meta.env.VITE_APP_LIBRARY_URL && (
+        <LibraryMenuBrowseButton
+          id={id}
+          libraryReturnUrl={libraryReturnUrl}
+          theme={theme}
+        />
+      )}
       {children}
     </div>
   );

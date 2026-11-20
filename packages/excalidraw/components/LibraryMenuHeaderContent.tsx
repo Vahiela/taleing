@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { muteFSAbortError } from "@excalidraw/common";
 
@@ -13,11 +13,8 @@ import { t } from "../i18n";
 
 import { useApp, useExcalidrawSetAppState } from "./App";
 import ConfirmDialog from "./ConfirmDialog";
-import { Dialog } from "./Dialog";
 import { isLibraryMenuOpenAtom } from "./LibraryMenu";
-import PublishLibrary from "./PublishLibrary";
-import { IconButton } from "./IconButton";
-import Trans from "./Trans";
+import RenameLibraryItems from "./RenameLibraryItems";
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import {
   DotsIcon,
@@ -30,12 +27,7 @@ import {
 import type Library from "../data/library";
 import type { LibraryItem, LibraryItems, UIAppState } from "../types";
 
-const getSelectedItems = (
-  libraryItems: LibraryItems,
-  selectedItems: LibraryItem["id"][],
-) => libraryItems.filter((item) => selectedItems.includes(item.id));
-
-export const LibraryDropdownMenuButton: React.FC<{
+const LibraryDropdownMenuButton: React.FC<{
   setAppState: React.Component<any, UIAppState>["setState"];
   selectedItems: LibraryItem["id"][];
   library: Library;
@@ -98,63 +90,7 @@ export const LibraryDropdownMenuButton: React.FC<{
     ? t("buttons.remove")
     : t("buttons.resetLibrary");
 
-  const [showPublishLibraryDialog, setShowPublishLibraryDialog] =
-    useState(false);
-  const [publishLibSuccess, setPublishLibSuccess] = useState<null | {
-    url: string;
-    authorName: string;
-  }>(null);
-  const renderPublishSuccess = useCallback(() => {
-    return (
-      <Dialog
-        onCloseRequest={() => setPublishLibSuccess(null)}
-        title={t("publishSuccessDialog.title")}
-        className="publish-library-success"
-        size="small"
-      >
-        <p>
-          <Trans
-            i18nKey="publishSuccessDialog.content"
-            authorName={publishLibSuccess!.authorName}
-            link={(el) => (
-              <a
-                href={publishLibSuccess?.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {el}
-              </a>
-            )}
-          />
-        </p>
-        <IconButton
-          type="button"
-          title={t("buttons.close")}
-          aria-label={t("buttons.close")}
-          label={t("buttons.close")}
-          onClick={() => setPublishLibSuccess(null)}
-          data-testid="publish-library-success-close"
-          className="publish-library-success-close"
-        />
-      </Dialog>
-    );
-  }, [setPublishLibSuccess, publishLibSuccess]);
-
-  const onPublishLibSuccess = (
-    data: { url: string; authorName: string },
-    libraryItems: LibraryItems,
-  ) => {
-    setShowPublishLibraryDialog(false);
-    setPublishLibSuccess({ url: data.url, authorName: data.authorName });
-    const nextLibItems = libraryItems.slice();
-    nextLibItems.forEach((libItem) => {
-      if (selectedItems.includes(libItem.id)) {
-        libItem.status = "published";
-      }
-    });
-    library.setLibrary(nextLibItems);
-  };
-
+  const [showRenameLibraryDialog, setShowRenameLibraryDialog] = useState(false);
   const onLibraryImport = async () => {
     try {
       await library.updateLibrary({
@@ -223,10 +159,10 @@ export const LibraryDropdownMenuButton: React.FC<{
           {itemsSelected && (
             <DropdownMenu.Item
               icon={publishIcon}
-              onSelect={() => setShowPublishLibraryDialog(true)}
-              data-testid="lib-dropdown--remove"
+              onSelect={() => setShowRenameLibraryDialog(true)}
+              data-testid="lib-dropdown--rename"
             >
-              {t("buttons.publishLibrary")}
+              {t("buttons.renameLibItems")}
             </DropdownMenu.Item>
           )}
           {!!items.length && (
@@ -249,27 +185,31 @@ export const LibraryDropdownMenuButton: React.FC<{
         <div className="library-actions-counter">{selectedItems.length}</div>
       )}
       {showRemoveLibAlert && renderRemoveLibAlert()}
-      {showPublishLibraryDialog && (
-        <PublishLibrary
-          onClose={() => setShowPublishLibraryDialog(false)}
-          libraryItems={getSelectedItems(
-            libraryItemsData.libraryItems,
-            selectedItems,
-          )}
+      {showRenameLibraryDialog && (
+        <RenameLibraryItems
+          onClose={() => setShowRenameLibraryDialog(false)}
+          libraryItems={items}
           appState={appState}
-          onSuccess={(data) =>
-            onPublishLibSuccess(data, libraryItemsData.libraryItems)
-          }
-          onError={(error) => window.alert(error)}
-          updateItemsInStorage={() =>
-            library.setLibrary(libraryItemsData.libraryItems)
-          }
-          onRemove={(id: string) =>
-            onSelectItems(selectedItems.filter((_id) => _id !== id))
+          onSave={(renamed) => {
+            const byId = new Map(renamed.map((item) => [item.id, item]));
+            library
+              .setLibrary(
+                libraryItemsData.libraryItems.map(
+                  (item) => byId.get(item.id) ?? item,
+                ),
+              )
+              .then(() => setShowRenameLibraryDialog(false))
+              .catch((error: Error) =>
+                setAppState({ errorMessage: error.message }),
+              );
+          }}
+          onRemove={(id) =>
+            onSelectItems(
+              selectedItems.filter((selectedId) => selectedId !== id),
+            )
           }
         />
       )}
-      {publishLibSuccess && renderPublishSuccess()}
     </div>
   );
 };

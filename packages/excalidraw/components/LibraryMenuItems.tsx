@@ -279,7 +279,7 @@ export default function LibraryMenuItems({
             </div>
           )}
           <div className="library-menu-items__no-items__hint">
-            {publishedItems.length > 0
+            {!import.meta.env.VITE_APP_LIBRARY_URL || publishedItems.length > 0
               ? t("library.hint_emptyPrivateLibrary")
               : t("library.hint_emptyLibrary")}
           </div>

@@ -74,6 +74,11 @@ try {
 
   const page = await open(taleing);
   page.setDefaultTimeout(10_000);
+  await page.locator(".taleing-wordmark").waitFor();
+  assert.equal(
+    await page.getByRole("link", { name: /sign up|Excalidraw CLI/i }).count(),
+    0,
+  );
   const { request } = page;
   assert.equal(await page.title(), "Taleing Whiteboard");
   const manifestResponse = await request.get(taleing + "manifest.webmanifest");
@@ -81,7 +86,7 @@ try {
   const manifest = await manifestResponse.json();
   assert.equal(manifest.start_url, prefix);
   assert.equal(manifest.file_handlers[0].action, prefix);
-  for (const { src } of [...manifest.icons, ...manifest.screenshots]) {
+  for (const { src } of [...manifest.icons, ...(manifest.screenshots || [])]) {
     assert.equal(
       (await request.get(new URL(src, taleing).href)).status(),
       200,
@@ -99,7 +104,7 @@ try {
   );
   assert.equal(
     (await request.get(taleing + "excalidraw-plus-export/")).status(),
-    200,
+    404,
   );
   const notFound = await request.get(taleing + "missing-document/");
   assert.equal(notFound.status(), 404);
@@ -305,36 +310,21 @@ try {
     "Legacy library import, current library export, and library persistence passed",
   );
 
-  if (!process.env.TALEING_SMOKE_URL && !process.env.VITE_APP_WS_SERVER_URL) {
+  if (!process.env.VITE_APP_WS_SERVER_URL) {
     await page.getByTestId("main-menu-trigger").click();
-    await page.getByText("Live collaboration...", { exact: true }).click();
-    await page.getByRole("button", { name: "Start session" }).click();
-    await page
-      .getByText("Live collaboration is unavailable", { exact: false })
-      .waitFor();
-    assert.equal(new URL(page.url()).hash, "");
-    await page.keyboard.press("Escape");
-    await page.keyboard.press("Escape");
-    console.log(
-      "Unconfigured collaboration reports its status before creating a room",
+    assert.equal(
+      await page.getByText("Live collaboration...", { exact: true }).count(),
+      0,
     );
+    await page.keyboard.press("Escape");
   }
-
-  if (
-    !process.env.TALEING_SMOKE_URL &&
-    !process.env.VITE_APP_BACKEND_V2_POST_URL
-  ) {
-    const sharing = await open(taleing);
-    await importFile(sharing, { ...sceneFile, mimeType: "application/json" });
-    await waitForCount(sharing, savedElements.length);
-    await selectMenu(sharing, "json-export-button");
-    await sharing.getByRole("button", { name: "Export to Link" }).click();
-    await sharing
-      .getByText("Shareable links are unavailable", { exact: false })
-      .waitFor();
-    console.log(
-      "Unconfigured sharing reports its status without uploading the drawing",
+  if (!process.env.VITE_APP_BACKEND_V2_POST_URL) {
+    await selectMenu(page, "json-export-button");
+    assert.equal(
+      await page.getByRole("button", { name: "Export to Link" }).count(),
+      0,
     );
+    await page.keyboard.press("Escape");
   }
 
   if (upstreamBuild) {

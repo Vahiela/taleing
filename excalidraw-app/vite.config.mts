@@ -418,28 +418,7 @@ export default defineConfig(({ mode }) => {
           name: "Taleing",
           description:
             "An open-source whiteboard from Tales Studio, based on Excalidraw.",
-          icons: [
-            {
-              src: "android-chrome-192x192.png",
-              sizes: "192x192",
-              type: "image/png",
-            },
-            {
-              src: "apple-touch-icon.png",
-              type: "image/png",
-              sizes: "180x180",
-            },
-            {
-              src: "favicon-32x32.png",
-              sizes: "32x32",
-              type: "image/png",
-            },
-            {
-              src: "favicon-16x16.png",
-              sizes: "16x16",
-              type: "image/png",
-            },
-          ],
+          icons: [{ src: "favicon.svg", sizes: "any", type: "image/svg+xml" }],
           start_url: base,
           id: base,
           display: "standalone",
@@ -451,38 +430,6 @@ export default defineConfig(({ mode }) => {
               accept: {
                 "application/vnd.excalidraw+json": [".excalidraw"],
               },
-            },
-          ],
-          screenshots: [
-            {
-              src: "screenshots/virtual-whiteboard.png",
-              type: "image/png",
-              sizes: "462x945",
-            },
-            {
-              src: "screenshots/wireframe.png",
-              type: "image/png",
-              sizes: "462x945",
-            },
-            {
-              src: "screenshots/illustration.png",
-              type: "image/png",
-              sizes: "462x945",
-            },
-            {
-              src: "screenshots/shapes.png",
-              type: "image/png",
-              sizes: "462x945",
-            },
-            {
-              src: "screenshots/collaboration.png",
-              type: "image/png",
-              sizes: "462x945",
-            },
-            {
-              src: "screenshots/export.png",
-              type: "image/png",
-              sizes: "462x945",
             },
           ],
         },

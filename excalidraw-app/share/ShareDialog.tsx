@@ -50,7 +50,7 @@ const getShareIcon = () => {
 export type ShareDialogProps = {
   collabAPI: CollabAPI | null;
   handleClose: () => void;
-  onExportToBackend: OnExportToBackend;
+  onExportToBackend?: OnExportToBackend;
   type: ShareDialogType;
 };
 
@@ -206,7 +206,7 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
         />
       </div>
 
-      {props.type === "share" && (
+      {props.type === "share" && props.onExportToBackend && (
         <div className="ShareDialog__separator">
           <span>{t("shareDialog.or")}</span>
         </div>
@@ -218,7 +218,7 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
     <>
       {startCollabJSX}
 
-      {props.type === "share" && (
+      {props.type === "share" && props.onExportToBackend && (
         <>
           <div className="ShareDialog__picker__header">
             {t("exportDialog.link_title")}
@@ -233,7 +233,7 @@ const ShareDialogPicker = (props: ShareDialogProps) => {
               label={t("exportDialog.link_button")}
               icon={LinkIcon}
               onClick={async () => {
-                await props.onExportToBackend();
+                await props.onExportToBackend?.();
                 props.handleClose();
               }}
             />
@@ -266,7 +266,7 @@ const ShareDialogInner = (props: ShareDialogProps) => {
 
 export const ShareDialog = (props: {
   collabAPI: CollabAPI | null;
-  onExportToBackend: OnExportToBackend;
+  onExportToBackend?: OnExportToBackend;
 }) => {
   const [shareDialogState, setShareDialogState] = useAtom(shareDialogStateAtom);
 

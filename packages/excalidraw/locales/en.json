@@ -272,6 +272,7 @@
     "remove": "Remove",
     "embed": "Toggle embedding",
     "publishLibrary": "Rename or publish",
+    "renameLibItems": "Rename library items",
     "submit": "Submit",
     "confirm": "Confirm",
     "embeddableInteractionButton": "Click to interact"
