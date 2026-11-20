@@ -1,0 +1,1289 @@
+diff --git a/.env.production b/.env.production
+index 72dd24d6..030062fc 100644
+--- a/.env.production
++++ b/.env.production
+@@ -1,20 +1,20 @@
+ MODE="production"
+ 
+-VITE_APP_BACKEND_V2_GET_URL=https://json.excalidraw.com/api/v2/
+-VITE_APP_BACKEND_V2_POST_URL=https://json.excalidraw.com/api/v2/post/
++VITE_APP_BACKEND_V2_GET_URL=
++VITE_APP_BACKEND_V2_POST_URL=
+ 
+ VITE_APP_LIBRARY_URL=https://libraries.excalidraw.com
+-VITE_APP_LIBRARY_BACKEND=https://us-central1-excalidraw-room-persistence.cloudfunctions.net/libraries
++VITE_APP_LIBRARY_BACKEND=
+ 
+ VITE_APP_PLUS_LP=https://plus.excalidraw.com
+ VITE_APP_PLUS_APP=https://app.excalidraw.com
+ 
+-VITE_APP_AI_BACKEND=https://oss-ai.excalidraw.com
++VITE_APP_AI_BACKEND=
+ 
+ # socket server URL used for collaboration
+-VITE_APP_WS_SERVER_URL=https://oss-collab.excalidraw.com
++VITE_APP_WS_SERVER_URL=
+ 
+-VITE_APP_FIREBASE_CONFIG='{"apiKey":"AIzaSyAd15pYlMci_xIp9ko6wkEsDzAAA0Dn0RU","authDomain":"excalidraw-room-persistence.firebaseapp.com","databaseURL":"https://excalidraw-room-persistence.firebaseio.com","projectId":"excalidraw-room-persistence","storageBucket":"excalidraw-room-persistence.appspot.com","messagingSenderId":"654800341332","appId":"1:654800341332:web:4a692de832b55bd57ce0c1"}'
++VITE_APP_FIREBASE_CONFIG='{}'
+ 
+ VITE_APP_ENABLE_TRACKING=false
+ 
+diff --git a/.github/workflows/autorelease-excalidraw.yml b/.github/upstream-workflows/autorelease-excalidraw.yml
+similarity index 100%
+rename from .github/workflows/autorelease-excalidraw.yml
+rename to .github/upstream-workflows/autorelease-excalidraw.yml
+diff --git a/.github/workflows/build-docker.yml b/.github/upstream-workflows/build-docker.yml
+similarity index 100%
+rename from .github/workflows/build-docker.yml
+rename to .github/upstream-workflows/build-docker.yml
+diff --git a/.github/workflows/cancel.yml b/.github/upstream-workflows/cancel.yml
+similarity index 100%
+rename from .github/workflows/cancel.yml
+rename to .github/upstream-workflows/cancel.yml
+diff --git a/.github/workflows/lint.yml b/.github/upstream-workflows/lint.yml
+similarity index 100%
+rename from .github/workflows/lint.yml
+rename to .github/upstream-workflows/lint.yml
+diff --git a/.github/workflows/locales-coverage.yml b/.github/upstream-workflows/locales-coverage.yml
+similarity index 100%
+rename from .github/workflows/locales-coverage.yml
+rename to .github/upstream-workflows/locales-coverage.yml
+diff --git a/.github/workflows/publish-docker.yml b/.github/upstream-workflows/publish-docker.yml
+similarity index 100%
+rename from .github/workflows/publish-docker.yml
+rename to .github/upstream-workflows/publish-docker.yml
+diff --git a/.github/workflows/semantic-pr-title.yml b/.github/upstream-workflows/semantic-pr-title.yml
+similarity index 100%
+rename from .github/workflows/semantic-pr-title.yml
+rename to .github/upstream-workflows/semantic-pr-title.yml
+diff --git a/.github/workflows/sentry-production.yml b/.github/upstream-workflows/sentry-production.yml
+similarity index 100%
+rename from .github/workflows/sentry-production.yml
+rename to .github/upstream-workflows/sentry-production.yml
+diff --git a/.github/workflows/size-limit.yml b/.github/upstream-workflows/size-limit.yml
+similarity index 100%
+rename from .github/workflows/size-limit.yml
+rename to .github/upstream-workflows/size-limit.yml
+diff --git a/.github/workflows/stats.yml b/.github/upstream-workflows/stats.yml
+similarity index 100%
+rename from .github/workflows/stats.yml
+rename to .github/upstream-workflows/stats.yml
+diff --git a/.github/workflows/test-coverage-pr.yml b/.github/upstream-workflows/test-coverage-pr.yml
+similarity index 100%
+rename from .github/workflows/test-coverage-pr.yml
+rename to .github/upstream-workflows/test-coverage-pr.yml
+diff --git a/.github/workflows/test.yml b/.github/upstream-workflows/test.yml
+similarity index 100%
+rename from .github/workflows/test.yml
+rename to .github/upstream-workflows/test.yml
+diff --git a/.github/workflows/pages.yml b/.github/workflows/pages.yml
+new file mode 100644
+index 00000000..bc2819ca
+--- /dev/null
++++ b/.github/workflows/pages.yml
+@@ -0,0 +1,92 @@
++name: Taleing Pages
++
++on:
++  push:
++    branches: [main]
++    paths-ignore: [taleing-import.patch]
++  pull_request:
++  workflow_dispatch:
++
++permissions:
++  contents: read
++
++concurrency:
++  group: taleing-pages-${{ github.ref }}
++  cancel-in-progress: true
++
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    env:
++      HUSKY: 0
++      VITE_APP_BACKEND_V2_GET_URL: ${{ vars.VITE_APP_BACKEND_V2_GET_URL }}
++      VITE_APP_BACKEND_V2_POST_URL: ${{ vars.VITE_APP_BACKEND_V2_POST_URL }}
++      VITE_APP_WS_SERVER_URL: ${{ vars.VITE_APP_WS_SERVER_URL }}
++      VITE_APP_FIREBASE_CONFIG: ${{ vars.VITE_APP_FIREBASE_CONFIG || '{}' }}
++      VITE_APP_AI_BACKEND: ${{ vars.VITE_APP_AI_BACKEND }}
++      VITE_APP_LIBRARY_BACKEND: ${{ vars.VITE_APP_LIBRARY_BACKEND }}
++    steps:
++      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
++      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
++        with:
++          node-version: 24.22.3
++      - name: Install locked dependencies
++        run: corepack yarn install --frozen-lockfile --non-interactive
++      - name: Typecheck
++        run: corepack yarn test:typecheck
++      - name: Run upstream tests
++        run: corepack yarn test:app run --maxWorkers=3 --minWorkers=1
++      - name: Build Taleing
++        run: bash scripts/taleing/build-pages.sh
++      - name: Test Pages assets and editor
++        run: |
++          corepack yarn playwright install --with-deps chromium
++          node scripts/taleing/smoke-pages.mjs
++      - name: Upload Pages artifact
++        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
++        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
++        with:
++          path: excalidraw-app/build
++
++  deploy:
++    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
++    needs: build
++    runs-on: ubuntu-latest
++    permissions:
++      pages: write
++      id-token: write
++    environment:
++      name: github-pages
++      url: ${{ steps.deployment.outputs.page_url }}
++    steps:
++      - name: Deploy to GitHub Pages
++        id: deployment
++        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
++      - name: Verify public response
++        run: |
++          site=https://vahiela.github.io/taleing/
++          curl --fail --silent --show-error --retry 5 --retry-all-errors "${site}version.json" |
++            jq -e --arg sha "$GITHUB_SHA" '.version | split("-")[-1] as $prefix | $sha | startswith($prefix)'
++          curl --fail --silent --show-error --retry 5 --retry-all-errors "${site}manifest.webmanifest" |
++            jq -e '.start_url == "/taleing/"'
++          curl --fail --silent --show-error --retry 5 --retry-all-errors "$site" |
++            grep -F "<title>Taleing Whiteboard</title>" >/dev/null
++
++  release:
++    needs: deploy
++    runs-on: ubuntu-latest
++    permissions:
++      contents: write
++    env:
++      GH_TOKEN: ${{ github.token }}
++      GH_REPO: ${{ github.repository }}
++    steps:
++      - name: Publish the first verified baseline
++        run: |
++          if gh release view v0.1.0 >/dev/null 2>&1; then
++            exit 0
++          fi
++          gh release create v0.1.0 --target "$GITHUB_SHA" \
++            --title "Taleing 0.1.0 baseline" \
++            --notes "The initial Taleing deployment, based on Excalidraw 2c3dcc06ec807e81ab9437eceb1a8f7a3c590743. See TALEING.md for compatibility and hosted-service status."
+diff --git a/README.md b/README.md
+index 48b9d1de..9273c4f9 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,11 @@
++# Taleing
++
++Taleing is Tales Studio's independently maintained fork of the open-source Excalidraw web application. See [the baseline, setup, compatibility checks, and hosted feature status](TALEING.md).
++
++[Open Taleing](https://vahiela.github.io/taleing/)
++
++## Upstream Excalidraw README
++
+ <a href="https://excalidraw.com/" target="_blank" rel="noopener">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2_dark.png" />
+diff --git a/TALEING.md b/TALEING.md
+new file mode 100644
+index 00000000..8f67f382
+--- /dev/null
++++ b/TALEING.md
+@@ -0,0 +1,48 @@
++# Taleing baseline
++
++Taleing is the Excalidraw standalone web app maintained by Tales Studio. The upstream baseline is the Excalidraw master commit [2c3dcc06ec807e81ab9437eceb1a8f7a3c590743](https://github.com/excalidraw/excalidraw/commit/2c3dcc06ec807e81ab9437eceb1a8f7a3c590743), with source tree `879e10749e4dbfb941b24e862f9ba000564ae803`. The application and editor packages, React/Vite build, Yarn workspace lockfile, scene and library serializers, and upstream test suite come from that revision.
++
++The [upstream MIT license](LICENSE) and [laser-pointer license](packages/laser-pointer/LICENSE) are retained in source and copied to the Pages artifact. Taleing changes cover deployment, browser and install metadata, self-hosted assets, and configuration for external services. The upstream CI workflows are stored in [.github/upstream-workflows](.github/upstream-workflows) so upstream releases, publishing, and reporting jobs are outside Taleing's active CI.
++
++## Build and test
++
++Use Node 24.22.3 and Yarn 1.22.22 via Corepack. Run these commands from the repository root.
++
++```sh
++corepack yarn install --frozen-lockfile
++corepack yarn test:typecheck
++corepack yarn test:app run
++bash scripts/taleing/build-pages.sh
++corepack yarn playwright install chromium
++node scripts/taleing/smoke-pages.mjs
++```
++
++The pinned clean checkout and the Taleing tree passed typechecking, the production build, and 2,715 upstream tests across 154 files. The suite also reported 47 skipped tests and one todo.
++
++The production site is generated at `excalidraw-app/build` and served under `/taleing/`. The GitHub Pages source is **GitHub Actions**. Pushes to `main` run the tests, build, deployment, and public HTTP checks. Pull requests run the build and tests. The workflow also supports manual runs. [GitHub Pages settings](https://github.com/Vahiela/taleing/settings/pages)
++
++To compare the drawing format against the pinned upstream app, build a clean checkout of that commit with `corepack yarn build:app:docker`, then set `TALEING_UPSTREAM_BUILD` to the absolute path of its `excalidraw-app/build` before running the smoke test. It imports a Taleing drawing in the upstream app, exports it there, and imports it back into Taleing. Set `TALEING_SMOKE_URL` to exercise a deployed Taleing URL.
++
++## Hosted feature status
++
++The editor provides local scenes, libraries, and exports entirely in the browser. GitHub Pages hosts the static files. The following services are separate from that deployment.
++
++| Feature | Upstream dependency | Taleing baseline |
++| --- | --- | --- |
++| Live collaboration and presence | Socket.IO room relay. Upstream's [excalidraw-room](https://github.com/excalidraw/excalidraw-room) is an open-source starting point. Encrypted room persistence uses Firestore, and images use Firebase Storage. | The original controls and protocol remain. Configure `VITE_APP_WS_SERVER_URL` and `VITE_APP_FIREBASE_CONFIG` to enable a separately hosted relay and persistence. Verify two independent browser sessions, late join and reconnect, images, and room reopening. |
++| Read-only share links | `POST` sends compressed ciphertext and receives a JSON `id`. `GET` returns ciphertext for that ID. Firebase Storage holds encrypted linked images. The decryption key stays in the URL fragment. | Requires `VITE_APP_BACKEND_V2_POST_URL`, `VITE_APP_BACKEND_V2_GET_URL`, and a configured Firebase bucket. Default builds show an unavailable message. Existing hosted links reference the service that originally stored their content. |
++| Public library catalog and submissions | The [Excalidraw libraries catalog](https://libraries.excalidraw.com) serves browseable libraries. Publishing uploads a library, preview, and author metadata to its submission endpoint. | Browse keeps the upstream catalog link with Taleing's return URL. Local library files work independently of the catalog. Publishing requires a configured `VITE_APP_LIBRARY_BACKEND`. Catalog return and submission need separate verification. |
++| Text to Diagram and Diagram to Code | Two streaming HTTP endpoints under the upstream AI service. | The original entry points remain. They require a service implementing the upstream request and streaming response formats at `VITE_APP_AI_BACKEND`. The baseline reports that the service needs configuration. |
++| Excalidraw+ links, sign-in, and cloud export | The hosted Excalidraw+ application, signed iframe export requests, and the upstream Firebase migration bucket. | Links still go to the original service. The Plus export route is served under `/taleing/`. An authenticated end-to-end Plus round trip remains unverified. Plus subscriptions and hosted workspaces belong to Excalidraw. |
++| Remote scene and library URLs, embeds, and external content | File host CORS, content host policies, and availability of the linked site. | The existing URL-based import and embed code is retained. Availability depends on the content host. |
++| Telemetry and CDN assets | Upstream analytics, Sentry, and font CDN. | The Pages build omits upstream telemetry and serves the bundled fonts from Taleing. |
++
++The configuration variables above are public client configuration read at build time. Place them in GitHub Actions repository variables and rebuild after changes. Keep service credentials in backend infrastructure. Firebase's web config identifies the project and bucket. It is safe to publish only with service access controls appropriate for a public client.
++
++The upstream room server examined at [03ff435860b508d7cd9e005cfc90f7977ae2a593](https://github.com/excalidraw/excalidraw-room/commit/03ff435860b508d7cd9e005cfc90f7977ae2a593) implements the room, broadcast, and presence events used by the client. Pin the relay before deploying it. A working deployment needs TLS and WebSocket support, an allowed Taleing origin, and a supported Socket.IO handshake. Put limits and retention on the relay, share-link service, and object storage. Review the example upstream Firebase rules before configuring any public project. Those rules allow broad writes. [Firebase Storage setup](https://firebase.google.com/docs/storage/web/start)
++
++A public repository on GitHub Free supports the static site. Firebase Cloud Storage requires Blaze billing, even when usage qualifies for no-cost allowances. Relay hosting, share-link persistence, image bandwidth, and AI inference have separate costs based on provider and usage. This baseline does not provision paid infrastructure. [GitHub Pages availability](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) · [Firebase pricing](https://firebase.google.com/pricing)
++
++## Upstream upgrades
++
++Add or fetch the upstream remote from `https://github.com/excalidraw/excalidraw.git`. Compare `git diff 2c3dcc06ec807e81ab9437eceb1a8f7a3c590743 HEAD` to see the Taleing changes. On a review branch, bring in a specific new upstream commit, review upstream workflow changes outside the active workflow directory, rerun the typecheck and test suite, and repeat the browser tests and file round trips. Update the pin and the release verification record only after the upgrade has been checked.
+diff --git a/excalidraw-app/App.tsx b/excalidraw-app/App.tsx
+index 31edcaba..d17bb057 100644
+--- a/excalidraw-app/App.tsx
++++ b/excalidraw-app/App.tsx
+@@ -98,6 +98,8 @@ import Collab, {
+   collabAPIAtom,
+   isCollaboratingAtom,
+   isOfflineAtom,
++  hasCollaborationBackend,
++  COLLAB_BACKEND_UNAVAILABLE,
+   userToFollowAtom,
+ } from "./collab/Collab";
+ import { AppFooter } from "./components/AppFooter";
+@@ -112,7 +114,9 @@ import { TopErrorBoundary } from "./components/TopErrorBoundary";
+ import {
+   exportToBackend,
+   getCollaborationLinkData,
++  hasShareBackend,
+   importFromBackend,
++  SHARE_BACKEND_UNAVAILABLE,
+   isCollaborationLink,
+ } from "./data";
+ 
+@@ -250,6 +254,18 @@ const initializeScene = async (opts: {
+ 
+   let roomLinkData = getCollaborationLinkData(window.location.href);
+   const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
++  const unavailableBackend =
++    jsonBackendMatch && !hasShareBackend()
++      ? SHARE_BACKEND_UNAVAILABLE
++      : roomLinkData && !hasCollaborationBackend()
++      ? COLLAB_BACKEND_UNAVAILABLE
++      : null;
++  if (unavailableBackend) {
++    window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
++    scene.appState = { ...scene.appState, errorMessage: unavailableBackend };
++    return { scene, isExternalScene: false };
++  }
++
+   if (isExternalScene) {
+     if (
+       // don't prompt if scene is empty
+@@ -283,7 +299,7 @@ const initializeScene = async (opts: {
+       }
+       scene.scrollToContent = true;
+       if (!roomLinkData) {
+-        window.history.replaceState({}, APP_NAME, window.location.origin);
++        window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
+       }
+     } else {
+       // https://github.com/excalidraw/excalidraw/issues/1919
+@@ -300,10 +316,10 @@ const initializeScene = async (opts: {
+       }
+ 
+       roomLinkData = null;
+-      window.history.replaceState({}, APP_NAME, window.location.origin);
++      window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
+     }
+   } else if (externalUrlMatch) {
+-    window.history.replaceState({}, APP_NAME, window.location.origin);
++    window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
+ 
+     const url = externalUrlMatch[1];
+     try {
+@@ -1320,7 +1336,10 @@ const ExcalidrawWrapper = () => {
+ 
+ const ExcalidrawApp = () => {
+   const isCloudExportWindow =
+-    window.location.pathname === APP_ROUTES.excalidrawPlusExport;
++    window.location.pathname.replace(/\/$/, "") ===
++    `${import.meta.env.BASE_URL.slice(0, -1)}${
++      APP_ROUTES.excalidrawPlusExport
++    }`;
+   if (isCloudExportWindow) {
+     return <ExcalidrawPlusIframeExport />;
+   }
+diff --git a/excalidraw-app/collab/Collab.tsx b/excalidraw-app/collab/Collab.tsx
+index 5569aa0f..a3512b46 100644
+--- a/excalidraw-app/collab/Collab.tsx
++++ b/excalidraw-app/collab/Collab.tsx
+@@ -77,6 +77,7 @@ import {
+ import { FileStatusStore } from "../data/fileStatusStore";
+ import { LocalData } from "../data/LocalData";
+ import {
++  isFirebaseConfigured,
+   isSavedToFirebase,
+   loadFilesFromFirebase,
+   loadFromFirebase,
+@@ -118,6 +119,12 @@ export const userToFollowAtom = atom<UserToFollow | null>(null);
+ 
+ type CollabInstance = InstanceType<typeof Collab>;
+ 
++export const hasCollaborationBackend = () =>
++  Boolean(import.meta.env.VITE_APP_WS_SERVER_URL) && isFirebaseConfigured();
++
++export const COLLAB_BACKEND_UNAVAILABLE =
++  "Live collaboration is unavailable until Taleing's collaboration backend is configured.";
++
+ export interface CollabAPI {
+   /** function so that we can access the latest value from stale callbacks */
+   isCollaborating: () => boolean;
+@@ -400,7 +407,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
+       // that could have been saved in other tabs while we were collaborating
+       resetBrowserStateVersions();
+ 
+-      window.history.pushState({}, APP_NAME, window.location.origin);
++      window.history.pushState({}, APP_NAME, import.meta.env.BASE_URL);
+       this.destroySocketClient();
+ 
+       LocalData.fileStorage.reset();
+@@ -492,6 +499,11 @@ class Collab extends PureComponent<CollabProps, CollabState> {
+   startCollaboration = async (
+     existingRoomLinkData: null | { roomId: string; roomKey: string },
+   ) => {
++    if (!hasCollaborationBackend()) {
++      this.setErrorDialog(COLLAB_BACKEND_UNAVAILABLE);
++      return null;
++    }
++
+     if (!this.state.username) {
+       import("@excalidraw/random-username").then(({ getRandomUsername }) => {
+         const username = getRandomUsername();
+diff --git a/excalidraw-app/components/AI.tsx b/excalidraw-app/components/AI.tsx
+index dcee47f8..775c98f9 100644
+--- a/excalidraw-app/components/AI.tsx
++++ b/excalidraw-app/components/AI.tsx
+@@ -32,10 +32,16 @@ export const AIComponents = ({
+     },
+   );
+ 
++  const aiBackend = import.meta.env.VITE_APP_AI_BACKEND;
++
+   return (
+     <>
+       <DiagramToCodePlugin
+         generate={async ({ frame, children, onPartial }) => {
++          if (!aiBackend) {
++            throw new Error("Taleing's AI backend is not configured.");
++          }
++
+           const appState = excalidrawAPI.getAppState();
+ 
+           // SAFETY: This should never happen, but log it just in case
+@@ -63,9 +69,7 @@ export const AIComponents = ({
+           const textFromFrameChildren = getTextFromElements(children);
+ 
+           const response = await fetch(
+-            `${
+-              import.meta.env.VITE_APP_AI_BACKEND
+-            }/v1/ai/diagram-to-code/generate-streaming`,
++            `${aiBackend}/v1/ai/diagram-to-code/generate-streaming`,
+             {
+               method: "POST",
+               headers: {
+@@ -164,12 +168,14 @@ export const AIComponents = ({
+ 
+       <TTDDialog
+         onTextSubmit={async (props) => {
++          if (!aiBackend) {
++            throw new Error("Taleing's AI backend is not configured.");
++          }
++
+           const { onChunk, onStreamCreated, signal, messages } = props;
+ 
+           const result = await TTDStreamFetch({
+-            url: `${
+-              import.meta.env.VITE_APP_AI_BACKEND
+-            }/v1/ai/text-to-diagram/chat-streaming`,
++            url: `${aiBackend}/v1/ai/text-to-diagram/chat-streaming`,
+             messages,
+             onChunk,
+             onStreamCreated,
+diff --git a/excalidraw-app/data/firebase.ts b/excalidraw-app/data/firebase.ts
+index e534f2ca..68860c1e 100644
+--- a/excalidraw-app/data/firebase.ts
++++ b/excalidraw-app/data/firebase.ts
+@@ -31,12 +31,11 @@ import type { Socket } from "socket.io-client";
+ import type { Bytes } from "firebase/firestore";
+ import type { UploadMetadata } from "firebase/storage";
+ 
+-// private
+-// -----------------------------------------------------------------------------
+-
+ let FIREBASE_CONFIG: Record<string, any>;
+ try {
+-  FIREBASE_CONFIG = JSON.parse(import.meta.env.VITE_APP_FIREBASE_CONFIG);
++  FIREBASE_CONFIG = JSON.parse(
++    import.meta.env.VITE_APP_FIREBASE_CONFIG || "{}",
++  );
+ } catch (error: any) {
+   console.warn(
+     `Error JSON parsing firebase config. Supplied value: ${
+@@ -46,6 +45,13 @@ try {
+   FIREBASE_CONFIG = {};
+ }
+ 
++export const isFirebaseConfigured = () =>
++  Boolean(
++    FIREBASE_CONFIG?.apiKey &&
++      FIREBASE_CONFIG.projectId &&
++      FIREBASE_CONFIG.storageBucket,
++  );
++
+ const lazy = <T>(load: () => Promise<T>) => {
+   let promise: Promise<T> | null = null;
+   return () =>
+diff --git a/excalidraw-app/data/index.ts b/excalidraw-app/data/index.ts
+index bf765941..68401cb1 100644
+--- a/excalidraw-app/data/index.ts
++++ b/excalidraw-app/data/index.ts
+@@ -36,7 +36,7 @@ import {
+ } from "../app_constants";
+ 
+ import { encodeFilesForUpload } from "./FileManager";
+-import { saveFilesToFirebase } from "./firebase";
++import { isFirebaseConfigured, saveFilesToFirebase } from "./firebase";
+ 
+ import type { WS_SUBTYPES } from "../app_constants";
+ 
+@@ -65,6 +65,12 @@ export const getSyncableElements = (
+ const BACKEND_V2_GET = import.meta.env.VITE_APP_BACKEND_V2_GET_URL;
+ const BACKEND_V2_POST = import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+ 
++export const hasShareBackend = () =>
++  Boolean(BACKEND_V2_GET && BACKEND_V2_POST) && isFirebaseConfigured();
++
++export const SHARE_BACKEND_UNAVAILABLE =
++  "Shareable links are unavailable until Taleing's sharing backend is configured.";
++
+ const generateRoomId = async () => {
+   const buffer = new Uint8Array(ROOM_ID_BYTES);
+   window.crypto.getRandomValues(buffer);
+@@ -250,6 +256,10 @@ export const exportToBackend = async (
+   appState: Partial<AppState>,
+   files: BinaryFiles,
+ ): Promise<ExportToBackendResult> => {
++  if (!hasShareBackend()) {
++    return { url: null, errorMessage: SHARE_BACKEND_UNAVAILABLE };
++  }
++
+   const encryptionKey = await generateEncryptionKey("string");
+ 
+   const payload = await compressData(
+diff --git a/excalidraw-app/index.html b/excalidraw-app/index.html
+index 1c29d722..b411db65 100644
+--- a/excalidraw-app/index.html
++++ b/excalidraw-app/index.html
+@@ -2,7 +2,7 @@
+ <html lang="en">
+   <head>
+     <meta charset="utf-8" />
+-    <title>Excalidraw Whiteboard</title>
++    <title>Taleing Whiteboard</title>
+     <meta
+       name="viewport"
+       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, shrink-to-fit=no"
+@@ -12,49 +12,14 @@
+     <meta name="theme-color" content="#121212" />
+ 
+     <!-- Primary Meta Tags -->
+-    <meta
+-      name="title"
+-      content="Free, collaborative whiteboard • Hand-drawn look & feel | Excalidraw"
+-    />
++    <meta name="title" content="Taleing Whiteboard" />
+     <meta
+       name="description"
+-      content="Excalidraw is a virtual collaborative whiteboard tool that lets you easily sketch diagrams that have a hand-drawn feel to them."
++      content="An open-source whiteboard from Tales Studio, based on Excalidraw."
+     />
+-    <meta name="image" content="https://excalidraw.com/og-image-3.png" />
+-
+-    <!-- Open Graph / Facebook -->
+-    <meta property="og:site_name" content="Excalidraw" />
++    <meta property="og:site_name" content="Taleing" />
+     <meta property="og:type" content="website" />
+-    <meta property="og:url" content="https://excalidraw.com" />
+-    <meta
+-      property="og:title"
+-      content="Excalidraw — Collaborative whiteboarding made easy"
+-    />
+-    <meta property="og:image:alt" content="Excalidraw logo" />
+-    <meta
+-      property="og:description"
+-      content="Excalidraw is a virtual collaborative whiteboard tool that lets you easily sketch diagrams that have a hand-drawn feel to them."
+-    />
+-    <meta property="og:image" content="https://excalidraw.com/og-image-3.png" />
+-
+-    <!-- Twitter -->
+-    <meta property="twitter:card" content="summary_large_image" />
+-    <meta property="twitter:site" content="@excalidraw" />
+-    <meta property="twitter:url" content="https://excalidraw.com" />
+-    <meta
+-      property="twitter:title"
+-      content="Excalidraw — Collaborative whiteboarding made easy"
+-    />
+-    <meta
+-      property="twitter:description"
+-      content="Excalidraw is a virtual collaborative whiteboard tool that lets you easily sketch diagrams that have a hand-drawn feel to them."
+-    />
+-    <meta
+-      property="twitter:image"
+-      content="https://excalidraw.com/og-image-3.png"
+-    />
+-
+-    <link rel="canonical" href="https://excalidraw.com" />
++    <meta property="og:title" content="Taleing Whiteboard" />
+ 
+     <!------------------------------------------------------------------------->
+     <!--   to minimize white flash on load when user has dark mode enabled   -->
+@@ -92,10 +57,6 @@
+       }
+     </style>
+ 
+-    <!-- Warmup the connection for Google fonts -->
+-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+-
+     <!------------------------------------------------------------------------->
+     <% if (typeof PROD != 'undefined' && PROD == true) { %>
+     <script>
+@@ -107,7 +68,7 @@
+       // Putting into index.html for best performance (can't redirect on server
+       // due to location.hash checks).
+       if (
+-        window.location.pathname === "/" &&
++        window.location.pathname === "%BASE_URL%" &&
+         !window.location.hash &&
+         !window.location.search &&
+         // if its present redirect
+@@ -210,43 +171,9 @@
+   <body>
+     <noscript> You need to enable JavaScript to run this app. </noscript>
+     <header>
+-      <h1 class="visually-hidden">Excalidraw</h1>
++      <h1 class="visually-hidden">Taleing</h1>
+     </header>
+     <div id="root"></div>
+     <script type="module" src="index.tsx"></script>
+-    <% if (typeof PROD != 'undefined' && PROD == true) { %>
+-    <!-- 100% privacy friendly analytics -->
+-    <script>
+-      // need to load this script dynamically bcs. of iframe embed tracking
+-      var scriptEle = document.createElement("script");
+-      scriptEle.setAttribute(
+-        "src",
+-        "https://scripts.simpleanalyticscdn.com/latest.js",
+-      );
+-      scriptEle.setAttribute("type", "text/javascript");
+-      scriptEle.setAttribute("defer", true);
+-      scriptEle.setAttribute("async", true);
+-      // if iframe
+-      if (window.self !== window.top) {
+-        scriptEle.setAttribute("data-auto-collect", true);
+-      }
+-
+-      document.body.appendChild(scriptEle);
+-
+-      // if iframe
+-      if (window.self !== window.top) {
+-        scriptEle.addEventListener("load", () => {
+-          if (window.sa_pageview) {
+-            window.window.sa_event(action, {
+-              category: "iframe",
+-              label: "embed",
+-              value: window.location.pathname,
+-            });
+-          }
+-        });
+-      }
+-    </script>
+-    <!-- end LEGACY GOOGLE ANALYTICS -->
+-    <% } %>
+   </body>
+ </html>
+diff --git a/excalidraw-app/tests/collab.test.tsx b/excalidraw-app/tests/collab.test.tsx
+index 4998c007..b398dcf2 100644
+--- a/excalidraw-app/tests/collab.test.tsx
++++ b/excalidraw-app/tests/collab.test.tsx
+@@ -44,6 +44,7 @@ vi.mock("../../excalidraw-app/data/firebase.ts", () => {
+     loadFromFirebase,
+     saveToFirebase,
+     isSavedToFirebase,
++    isFirebaseConfigured: () => true,
+     loadFilesFromFirebase,
+     saveFilesToFirebase,
+   };
+@@ -69,6 +70,9 @@ vi.mock("socket.io-client", () => {
+  * i.e. multiplayer history tests could be a good first candidate, as we could test both history stacks simultaneously.
+  */
+ describe("collaboration", () => {
++  beforeEach(() => vi.stubEnv("VITE_APP_WS_SERVER_URL", "https://collab.test"));
++  afterEach(() => vi.unstubAllEnvs());
++
+   it("should emit two ephemeral increments even though updates get batched", async () => {
+     const durableIncrements: DurableIncrement[] = [];
+     const ephemeralIncrements: EphemeralIncrement[] = [];
+diff --git a/excalidraw-app/vite.config.mts b/excalidraw-app/vite.config.mts
+index f7ddd0f7..fba98f62 100644
+--- a/excalidraw-app/vite.config.mts
++++ b/excalidraw-app/vite.config.mts
+@@ -139,12 +139,17 @@ const lazyChunksPlugin = (
+ export default defineConfig(({ mode }) => {
+   // To load .env variables
+   const envVars = loadEnv(mode, `../`);
++  const base = process.env.TALEING_BASE_PATH || "/";
++  const basePrefix = base.slice(0, -1);
++  const escapeForRegex = (value: string) =>
++    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+   // mermaid (+ its many deps & per-diagram chunks) is lazy-loaded and large,
+   // so we don't precache it (the app caches it once the TTD dialog is opened,
+   // see `cacheMermaidChunks`). Populated at build time by `lazyChunksPlugin`.
+   const mermaidChunkFileNames = new Set<string>();
+   // https://vitejs.dev/config/
+   return {
++    base,
+     server: {
+       port: Number(envVars.VITE_APP_PORT || 3000),
+       // open the browser
+@@ -273,9 +278,10 @@ export default defineConfig(({ mode }) => {
+     },
+     plugins: [
+       Sitemap({
+-        hostname: "https://excalidraw.com",
++        hostname: "https://vahiela.github.io",
++        dynamicRoutes: [base],
+         outDir: "build",
+-        exclude: ["/404"],
++        exclude: base === "/" ? ["/404"] : ["/", "/404"],
+         changefreq: "monthly",
+         // its static in public folder
+         generateRobotsTxt: false,
+@@ -313,9 +319,10 @@ export default defineConfig(({ mode }) => {
+           // network, so that unknown paths get the server's 404.
+           // To add a path, add it to APP_ROUTES.
+           navigateFallbackAllowlist: [
+-            /^\/(\?|$)/,
++            new RegExp(`^${escapeForRegex(base)}(\\?|$)`),
+             ...Object.values(APP_ROUTES).map(
+-              (route) => new RegExp(`^${route}(\\?|$)`),
++              (route) =>
++                new RegExp(`^${escapeForRegex(basePrefix + route)}/?(\\?|$)`),
+             ),
+           ],
+           // don't precache fonts, locales and separate chunks
+@@ -407,10 +414,10 @@ export default defineConfig(({ mode }) => {
+           maximumFileSizeToCacheInBytes: 2.3 * 1024 ** 2, // 2.3MB
+         },
+         manifest: {
+-          short_name: "Excalidraw",
+-          name: "Excalidraw",
++          short_name: "Taleing",
++          name: "Taleing",
+           description:
+-            "Excalidraw is a whiteboard tool that lets you easily sketch diagrams that have a hand-drawn feel to them.",
++            "An open-source whiteboard from Tales Studio, based on Excalidraw.",
+           icons: [
+             {
+               src: "android-chrome-192x192.png",
+@@ -433,14 +440,14 @@ export default defineConfig(({ mode }) => {
+               type: "image/png",
+             },
+           ],
+-          start_url: "/",
+-          id: "excalidraw",
++          start_url: base,
++          id: base,
+           display: "standalone",
+           theme_color: "#121212",
+           background_color: "#ffffff",
+           file_handlers: [
+             {
+-              action: "/",
++              action: base,
+               accept: {
+                 "application/vnd.excalidraw+json": [".excalidraw"],
+               },
+@@ -448,32 +455,32 @@ export default defineConfig(({ mode }) => {
+           ],
+           screenshots: [
+             {
+-              src: "/screenshots/virtual-whiteboard.png",
++              src: "screenshots/virtual-whiteboard.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/wireframe.png",
++              src: "screenshots/wireframe.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/illustration.png",
++              src: "screenshots/illustration.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/shapes.png",
++              src: "screenshots/shapes.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/collaboration.png",
++              src: "screenshots/collaboration.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+             {
+-              src: "/screenshots/export.png",
++              src: "screenshots/export.png",
+               type: "image/png",
+               sizes: "462x945",
+             },
+diff --git a/packages/excalidraw/components/PublishLibrary.tsx b/packages/excalidraw/components/PublishLibrary.tsx
+index 495d9b3a..f3852818 100644
+--- a/packages/excalidraw/components/PublishLibrary.tsx
++++ b/packages/excalidraw/components/PublishLibrary.tsx
+@@ -271,6 +271,14 @@ const PublishLibrary = ({
+ 
+   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+     event.preventDefault();
++    const libraryBackend = import.meta.env.VITE_APP_LIBRARY_BACKEND;
++    if (!libraryBackend) {
++      onError(
++        new Error("A public library submission backend is not configured."),
++      );
++      return;
++    }
++
+     setIsSubmitting(true);
+     const erroredLibItems: LibraryItem[] = [];
+     let isError = false;
+@@ -315,7 +323,7 @@ const PublishLibrary = ({
+     formData.append("twitterHandle", libraryData.twitterHandle);
+     formData.append("website", libraryData.website);
+ 
+-    fetch(`${import.meta.env.VITE_APP_LIBRARY_BACKEND}/submit`, {
++    fetch(`${libraryBackend}/submit`, {
+       method: "post",
+       body: formData,
+     })
+diff --git a/scripts/taleing/build-pages.sh b/scripts/taleing/build-pages.sh
+new file mode 100644
+index 00000000..27bd5e2e
+--- /dev/null
++++ b/scripts/taleing/build-pages.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++cd "$(dirname "$0")/../.."
++export TALEING_BASE_PATH=/taleing/
++export VITE_APP_GIT_SHA="$(git rev-parse HEAD)"
++export VITE_APP_ENABLE_TRACKING=false
++
++corepack yarn build:app:docker
++corepack yarn build:version
++
++build=excalidraw-app/build
++mkdir -p "$build/excalidraw-plus-export" "$build/licenses"
++sed -i 's|href="/sitemap.xml"|href="/taleing/sitemap.xml"|' "$build/index.html"
++cp "$build/index.html" "$build/excalidraw-plus-export/index.html"
++cp LICENSE "$build/LICENSE"
++cp packages/laser-pointer/LICENSE "$build/licenses/laser-pointer.txt"
++sed -i \
++  -e 's|href="/|href="/taleing/|g' \
++  -e 's|Open Excalidraw|Open Taleing|g' \
++  -e 's@Page not found | Excalidraw@Page not found | Taleing@g' \
++  "$build/404.html"
++sed -i 's|https://excalidraw.com/sitemap.xml|https://vahiela.github.io/taleing/sitemap.xml|' "$build/robots.txt"
+diff --git a/scripts/taleing/smoke-pages.mjs b/scripts/taleing/smoke-pages.mjs
+new file mode 100644
+index 00000000..f9781d7d
+--- /dev/null
++++ b/scripts/taleing/smoke-pages.mjs
+@@ -0,0 +1,342 @@
++import assert from "node:assert/strict";
++import { readFile } from "node:fs/promises";
++import { createServer } from "node:http";
++import path from "node:path";
++import { chromium } from "playwright";
++
++const build = path.resolve("excalidraw-app/build");
++const upstreamBuild = process.env.TALEING_UPSTREAM_BUILD;
++const prefix = "/taleing/";
++const mime = {
++  ".css": "text/css",
++  ".html": "text/html",
++  ".js": "text/javascript",
++  ".json": "application/json",
++  ".png": "image/png",
++  ".svg": "image/svg+xml",
++  ".webmanifest": "application/manifest+json",
++  ".woff2": "font/woff2",
++};
++
++const server = createServer(async (req, res) => {
++  const { pathname } = new URL(req.url, "http://localhost");
++  const isTaleing = pathname.startsWith(prefix);
++  const root = isTaleing ? build : upstreamBuild;
++  if (!root) {
++    res.writeHead(404).end();
++    return;
++  }
++  const relative = isTaleing
++    ? pathname.slice(prefix.length)
++    : pathname.slice(1);
++  const file = path.resolve(
++    root,
++    relative.endsWith("/") || !relative ? relative + "index.html" : relative,
++  );
++  try {
++    assert(file.startsWith(path.resolve(root) + path.sep));
++    const body = await readFile(file);
++    res.writeHead(200, {
++      "Content-Type": mime[path.extname(file)] || "application/octet-stream",
++    });
++    res.end(body);
++  } catch {
++    res.writeHead(404, { "Content-Type": "text/html" });
++    res.end(await readFile(path.join(root, "404.html")));
++  }
++});
++
++await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
++const origin = "http://127.0.0.1:" + server.address().port;
++const taleing = process.env.TALEING_SMOKE_URL || origin + prefix;
++let browser;
++
++try {
++  browser = await chromium.launch({
++    executablePath: process.env.CHROMIUM_PATH,
++  });
++  const open = async (url) => {
++    const context = await browser.newContext({
++      locale: "en-US",
++      viewport: { width: 1280, height: 800 },
++      permissions: ["clipboard-read", "clipboard-write"],
++    });
++    await context.addInitScript(() => {
++      // Exercise the app's browser download/input fallback in headless Chromium.
++      delete window.showOpenFilePicker;
++      delete window.showSaveFilePicker;
++    });
++    const page = await context.newPage();
++    await page.goto(url, { waitUntil: "domcontentloaded" });
++    await page.locator("canvas.interactive").waitFor();
++    return page;
++  };
++
++  const page = await open(taleing);
++  page.setDefaultTimeout(10_000);
++  const { request } = page;
++  assert.equal(await page.title(), "Taleing Whiteboard");
++  const manifestResponse = await request.get(taleing + "manifest.webmanifest");
++  assert.equal(manifestResponse.status(), 200);
++  const manifest = await manifestResponse.json();
++  assert.equal(manifest.start_url, prefix);
++  assert.equal(manifest.file_handlers[0].action, prefix);
++  for (const { src } of [...manifest.icons, ...manifest.screenshots]) {
++    assert.equal(
++      (await request.get(new URL(src, taleing).href)).status(),
++      200,
++      src,
++    );
++  }
++  assert.match(
++    await (await request.get(taleing + "LICENSE")).text(),
++    /Copyright \(c\) 2020 Excalidraw/,
++  );
++  assert.equal((await request.get(taleing + "version.json")).status(), 200);
++  assert.equal(
++    (await request.get(taleing + "excalidraw-plus-export/")).status(),
++    200,
++  );
++  const notFound = await request.get(taleing + "missing-document/");
++  assert.equal(notFound.status(), 404);
++  assert.match(await notFound.text(), /href="\/taleing\/">Open Taleing/);
++
++  const assetUrls = await page
++    .locator(
++      'head link[rel="preload"][as="font"], head link[rel="icon"], head link[rel="stylesheet"], head script[src]',
++    )
++    .evaluateAll((nodes) => nodes.map((node) => node.href ?? node.src));
++  assert(assetUrls.some((url) => url.endsWith(".woff2")));
++  for (const url of assetUrls) {
++    assert(url.startsWith(taleing), url);
++    assert.equal((await request.get(url)).status(), 200, url);
++  }
++  await page.waitForFunction(() =>
++    navigator.serviceWorker.controller?.scriptURL.endsWith("/taleing/sw.js"),
++  );
++  await page.context().setOffline(true);
++  await page.reload();
++  await page.locator("canvas.interactive").waitFor();
++  await page.context().setOffline(false);
++  console.log(
++    "Pages assets, scoped service worker, offline reload, and 404 passed",
++  );
++
++  const activeScene = async (tab) =>
++    tab.evaluate(() =>
++      JSON.parse(localStorage.getItem("excalidraw") || "[]").filter(
++        (el) => !el.isDeleted,
++      ),
++    );
++  const waitForCount = async (tab, count) =>
++    tab.waitForFunction(
++      (length) =>
++        JSON.parse(localStorage.getItem("excalidraw") || "[]").filter(
++          (el) => !el.isDeleted,
++        ).length === length,
++      count,
++      { timeout: 10_000 },
++    );
++  const drag = async (tab, from, to) => {
++    await tab.mouse.move(...from);
++    await tab.mouse.down();
++    await tab.mouse.move(...to, { steps: 8 });
++    await tab.mouse.up();
++  };
++  await page.keyboard.press("r");
++  await drag(page, [350, 325], [485, 395]);
++  await waitForCount(page, 1);
++  const [rectangle] = await activeScene(page);
++  assert.equal(rectangle.type, "rectangle");
++  await page.keyboard.press("v");
++  await page.mouse.click(400, 325);
++  await page.keyboard.press("ArrowRight");
++  await page.waitForFunction(
++    (x) => JSON.parse(localStorage.getItem("excalidraw") || "[]")[0]?.x > x,
++    rectangle.x,
++  );
++  await page.keyboard.press("o");
++  await drag(page, [595, 335], [685, 400]);
++  await waitForCount(page, 2);
++  await page.keyboard.press("Control+z");
++  await waitForCount(page, 1);
++  await page.keyboard.press("Control+Shift+z");
++  await waitForCount(page, 2);
++  await page.keyboard.press("Control+z");
++  await waitForCount(page, 1);
++  await page.keyboard.press("v");
++  await page.mouse.click(405, 325);
++  await page.keyboard.press("Control+c");
++  await page.mouse.move(660, 375);
++  await page.keyboard.press("Control+v");
++  await waitForCount(page, 2);
++  await page.keyboard.press("Control+z");
++  await waitForCount(page, 1);
++  console.log(
++    "Drawing, selection, keyboard movement, undo/redo, and clipboard passed",
++  );
++
++  const selectMenu = async (tab, testId) => {
++    const item = tab.getByTestId(testId);
++    if (!(await item.isVisible())) {
++      await tab.getByTestId("main-menu-trigger").click();
++    }
++    await item.click();
++  };
++  const importFile = async (tab, file) => {
++    const chooser = tab.waitForEvent("filechooser");
++    await selectMenu(tab, "load-button");
++    await (await chooser).setFiles(file);
++  };
++  const download = async (tab, button) => {
++    const [file] = await Promise.all([
++      tab.waitForEvent("download"),
++      button.click(),
++    ]);
++    return {
++      name: file.suggestedFilename(),
++      buffer: await readFile(await file.path()),
++    };
++  };
++  const saveScene = async (tab) => {
++    await selectMenu(tab, "json-export-button");
++    const file = await download(
++      tab,
++      tab.getByRole("button", { name: "Save to file", exact: true }),
++    );
++    assert.match(file.name, /\.excalidraw$/);
++    await tab.keyboard.press("Escape");
++    return file;
++  };
++  const fixture = "packages/excalidraw/tests/fixtures/";
++  const imageData = (await readFile(fixture + "deer.png")).toString("base64");
++  const transfer = await page.evaluateHandle((base64) => {
++    const data = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
++    const dataTransfer = new DataTransfer();
++    dataTransfer.items.add(new File([data], "deer.png", { type: "image/png" }));
++    return dataTransfer;
++  }, imageData);
++  await page.locator("canvas.interactive").dispatchEvent("drop", {
++    dataTransfer: transfer,
++    clientX: 600,
++    clientY: 415,
++  });
++  await transfer.dispose();
++  await waitForCount(page, 2);
++  const image = (await activeScene(page)).find(
++    (element) => element.type === "image",
++  );
++  assert(image?.fileId);
++  await page.mouse.click(765, 510);
++  const sceneFile = await saveScene(page);
++  const saved = JSON.parse(sceneFile.buffer);
++  const savedElements = saved.elements.filter((element) => !element.isDeleted);
++  assert.equal(saved.type, "excalidraw");
++  assert.equal(saved.version, 2);
++  assert.equal(saved.elements[0].id, rectangle.id);
++  assert.match(saved.files[image.fileId].dataURL, /^data:image\//);
++
++  await selectMenu(page, "image-export-button");
++  const png = await download(
++    page,
++    page.getByRole("button", { name: /Export to PNG/i }),
++  );
++  assert.equal(png.buffer.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
++  const svg = await download(
++    page,
++    page.getByRole("button", { name: /Export to SVG/i }),
++  );
++  assert.match(svg.buffer.toString(), /<svg\b/);
++  await page.keyboard.press("Escape");
++
++  await page.reload();
++  await page.locator("canvas.interactive").waitFor();
++  assert.equal((await activeScene(page))[0].id, rectangle.id);
++  const blank = await open(taleing);
++  await importFile(blank, { ...sceneFile, mimeType: "application/json" });
++  await waitForCount(blank, savedElements.length);
++  assert.equal((await activeScene(blank))[0].id, rectangle.id);
++  console.log(
++    "Image insertion, drawing-file import/export, PNG/SVG, and refresh passed",
++  );
++
++  const openLibrary = async (tab) => {
++    const sidebar = tab.getByRole("button", { name: "Library", exact: true });
++    if ((await sidebar.getAttribute("aria-pressed")) !== "true") {
++      await sidebar.click();
++    }
++  };
++  const libraryMenu = (tab) =>
++    tab
++      .locator(".library-menu-dropdown-container")
++      .getByTestId("dropdown-menu-button");
++  const importLibrary = async (tab, file) => {
++    await openLibrary(tab);
++    await libraryMenu(tab).click();
++    const chooser = tab.waitForEvent("filechooser");
++    await tab.getByTestId("lib-dropdown--load").click();
++    await (await chooser).setFiles(file);
++  };
++  const exportLibrary = async (tab) => {
++    await libraryMenu(tab).click();
++    const file = await download(tab, tab.getByTestId("lib-dropdown--export"));
++    assert.match(file.name, /\.excalidrawlib$/);
++    const data = JSON.parse(file.buffer);
++    assert.equal(data.type, "excalidrawlib");
++    assert.equal(data.version, 2);
++    assert(
++      data.libraryItems.some((item) =>
++        item.elements.some((el) => el.id === "A"),
++      ),
++    );
++    return file;
++  };
++  await importLibrary(blank, fixture + "fixture_library.excalidrawlib");
++  const libraryFile = await exportLibrary(blank);
++  await blank.reload();
++  await blank.locator("canvas.interactive").waitFor();
++  await openLibrary(blank);
++  await exportLibrary(blank);
++  console.log(
++    "Legacy library import, current library export, and library persistence passed",
++  );
++
++  if (upstreamBuild) {
++    const upstream = await open(origin + "/");
++    await importFile(upstream, { ...sceneFile, mimeType: "application/json" });
++    await waitForCount(upstream, savedElements.length);
++    const upstreamFile = await saveScene(upstream);
++    const reimport = await open(taleing);
++    await importFile(reimport, {
++      ...upstreamFile,
++      mimeType: "application/json",
++    });
++    await waitForCount(reimport, savedElements.length);
++    for (const tab of [upstream, reimport]) {
++      assert.deepEqual(
++        (await activeScene(tab)).map(({ id, type, x, y, width, height }) => ({
++          id,
++          type,
++          x,
++          y,
++          width,
++          height,
++        })),
++        savedElements.map(({ id, type, x, y, width, height }) => ({
++          id,
++          type,
++          x,
++          y,
++          width,
++          height,
++        })),
++      );
++    }
++    console.log(
++      "Two-way scene file round trip with the pinned upstream app passed",
++    );
++  }
++} finally {
++  await browser?.close();
++  await new Promise((resolve) => server.close(resolve));
++}
+diff --git a/scripts/woff2/woff2-vite-plugins.js b/scripts/woff2/woff2-vite-plugins.js
+index 3870bbcd..c6456aad 100644
+--- a/scripts/woff2/woff2-vite-plugins.js
++++ b/scripts/woff2/woff2-vite-plugins.js
+@@ -1,83 +1,30 @@
+-// define `EXCALIDRAW_ASSET_PATH` as a SSOT
+-const OSS_FONTS_CDN = "https://excalidraw.nyc3.cdn.digitaloceanspaces.com/oss/";
+-const OSS_FONTS_FALLBACK = "/";
+-
+ /**
+- * Custom vite plugin for auto-prefixing `EXCALIDRAW_ASSET_PATH` woff2 fonts in `excalidraw-app`.
++ * Set the production app's asset path and preload its bundled default fonts.
+  *
+  * @returns {import("vite").PluginOption}
+  */
+ module.exports.woff2BrowserPlugin = () => {
+-  let isDev;
++  let assetPath;
+ 
+   return {
+     name: "woff2BrowserPlugin",
++    apply: "build",
+     enforce: "pre",
+-    config(_, { command }) {
+-      isDev = command === "serve";
++    configResolved(config) {
++      assetPath = config.base;
+     },
+     transform(code, id) {
+-      // using copy / replace as fonts defined in the `.css` don't have to be manually copied over (vite/rollup does this automatically),
+-      // but at the same time can't be easily prefixed with the `EXCALIDRAW_ASSET_PATH` only for the `excalidraw-app`
+-      if (!isDev && id.endsWith("/excalidraw/fonts/fonts.css")) {
+-        return `/* WARN: The following content is generated during excalidraw-app build */
+-
+-      @font-face {
+-        font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Regular.woff2)
+-            format("woff2"),
+-          url(./Assistant-Regular.woff2) format("woff2");
+-        font-weight: 400;
+-        style: normal;
+-        display: swap;
+-      }
+-
+-      @font-face {
+-        font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Medium.woff2)
+-            format("woff2"),
+-          url(./Assistant-Medium.woff2) format("woff2");
+-        font-weight: 500;
+-        style: normal;
+-        display: swap;
+-      }
+-
+-      @font-face {
+-        font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-SemiBold.woff2)
+-            format("woff2"),
+-          url(./Assistant-SemiBold.woff2) format("woff2");
+-        font-weight: 600;
+-        style: normal;
+-        display: swap;
+-      }
+-
+-      @font-face {
+-        font-family: "Assistant";
+-        src: url(${OSS_FONTS_CDN}fonts/Assistant/Assistant-Bold.woff2)
+-            format("woff2"),
+-          url(./Assistant-Bold.woff2) format("woff2");
+-        font-weight: 700;
+-        style: normal;
+-        display: swap;
+-      }`;
+-      }
+-
+-      if (!isDev && id.endsWith("excalidraw-app/index.html")) {
++      if (id.endsWith("excalidraw-app/index.html")) {
+         return code.replace(
+           "<!-- PLACEHOLDER:EXCALIDRAW_APP_FONTS -->",
+           `<script>
+-        // point into our CDN in prod, fallback to root (excalidraw.com) domain in case of issues
+-        window.EXCALIDRAW_ASSET_PATH = [
+-          "${OSS_FONTS_CDN}",
+-          "${OSS_FONTS_FALLBACK}",
+-        ];
++        window.EXCALIDRAW_ASSET_PATH = ${JSON.stringify(assetPath)};
+       </script>
+ 
+       <!-- Preload all default fonts to avoid swap on init -->
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
++        href="${assetPath}fonts/Excalifont/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+@@ -85,21 +32,21 @@ module.exports.woff2BrowserPlugin = () => {
+       <!-- For Nunito only preload the latin range, which should be good enough for now -->
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
++        href="${assetPath}fonts/Nunito/Nunito-Regular-XRXI3I6Li01BKofiOc5wtlZ2di8HDIkhdTQ3j6zbXWjgeg.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+       />
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/Assistant/Assistant-SemiBold.woff2"
++        href="${assetPath}fonts/Assistant/Assistant-SemiBold.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
+       />
+       <link
+         rel="preload"
+-        href="${OSS_FONTS_CDN}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
++        href="${assetPath}fonts/ComicShanns/ComicShanns-Regular-279a7b317d12eb88de06167bd672b4b4.woff2"
+         as="font"
+         type="font/woff2"
+         crossorigin="anonymous"
