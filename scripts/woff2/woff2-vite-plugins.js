@@ -15,10 +15,12 @@ module.exports.woff2BrowserPlugin = () => {
     },
     transform(code, id) {
       if (id.endsWith("excalidraw-app/index.html")) {
+        // Vite already prefixes imported font URLs with the build base.
+        // Resolve them at the origin to avoid applying that base twice.
         return code.replace(
           "<!-- PLACEHOLDER:EXCALIDRAW_APP_FONTS -->",
           `<script>
-        window.EXCALIDRAW_ASSET_PATH = ${JSON.stringify(assetPath)};
+        window.EXCALIDRAW_ASSET_PATH = "/";
       </script>
 
       <!-- Preload all default fonts to avoid swap on init -->

@@ -131,6 +131,49 @@ try {
     "Pages assets, scoped service worker, offline reload, and 404 passed",
   );
 
+  const fontPage = await open(taleing);
+  const fontRequests = new Set();
+  fontPage.on("request", (request) => {
+    if (request.resourceType() === "font") {
+      fontRequests.add(request.url());
+    }
+  });
+  await fontPage.keyboard.press("t");
+  await fontPage.getByTestId("font-family-show-fonts").click();
+  const fonts = await fontPage.evaluate(async () => {
+    const samples = [
+      ["Excalifont", "Taleing"],
+      ["Nunito", "Taleing"],
+      ["Comic Shanns", "Taleing"],
+      ["Cascadia", "Taleing"],
+      ["Lilita One", "Taleing"],
+      ["Virgil", "Taleing"],
+      ["Liberation Sans", "Taleing"],
+      ["Xiaolai", "地图"],
+    ];
+    return Promise.all(
+      samples.map(async ([family, sample]) => {
+        try {
+          const faces = await document.fonts.load(`20px "${family}"`, sample);
+          return [family, faces.some((face) => face.status === "loaded")];
+        } catch {
+          return [family, false];
+        }
+      }),
+    );
+  });
+  for (const [family, loaded] of fonts) {
+    assert(loaded, `Could not load the ${family} font`);
+  }
+  assert(fontRequests.size > 0);
+  for (const url of fontRequests) {
+    assert(url.startsWith(taleing + "fonts/"), url);
+  }
+  await fontPage.context().close();
+  console.log(
+    "Bundled canvas fonts and CJK fallback loaded from Taleing Pages",
+  );
+
   const activeScene = async (tab) =>
     tab.evaluate(() =>
       JSON.parse(localStorage.getItem("excalidraw") || "[]").filter(
