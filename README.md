@@ -1,3 +1,11 @@
+# Taleing
+
+Taleing is Tales Studio's independently maintained fork of the open-source Excalidraw web application. See [the baseline, setup, compatibility checks, and hosted feature status](TALEING.md).
+
+[Open Taleing](https://vahiela.github.io/taleing/)
+
+## Upstream Excalidraw README
+
 <a href="https://excalidraw.com/" target="_blank" rel="noopener">
   <picture>
     <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2_dark.png" />

@@ -271,6 +271,14 @@ const PublishLibrary = ({
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const libraryBackend = import.meta.env.VITE_APP_LIBRARY_BACKEND;
+    if (!libraryBackend) {
+      onError(
+        new Error("A public library submission backend is not configured."),
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     const erroredLibItems: LibraryItem[] = [];
     let isError = false;
@@ -315,7 +323,7 @@ const PublishLibrary = ({
     formData.append("twitterHandle", libraryData.twitterHandle);
     formData.append("website", libraryData.website);
 
-    fetch(`${import.meta.env.VITE_APP_LIBRARY_BACKEND}/submit`, {
+    fetch(`${libraryBackend}/submit`, {
       method: "post",
       body: formData,
     })

@@ -31,12 +31,11 @@ import type { Socket } from "socket.io-client";
 import type { Bytes } from "firebase/firestore";
 import type { UploadMetadata } from "firebase/storage";
 
-// private
-// -----------------------------------------------------------------------------
-
 let FIREBASE_CONFIG: Record<string, any>;
 try {
-  FIREBASE_CONFIG = JSON.parse(import.meta.env.VITE_APP_FIREBASE_CONFIG);
+  FIREBASE_CONFIG = JSON.parse(
+    import.meta.env.VITE_APP_FIREBASE_CONFIG || "{}",
+  );
 } catch (error: any) {
   console.warn(
     `Error JSON parsing firebase config. Supplied value: ${
@@ -45,6 +44,13 @@ try {
   );
   FIREBASE_CONFIG = {};
 }
+
+export const isFirebaseConfigured = () =>
+  Boolean(
+    FIREBASE_CONFIG?.apiKey &&
+      FIREBASE_CONFIG.projectId &&
+      FIREBASE_CONFIG.storageBucket,
+  );
 
 const lazy = <T>(load: () => Promise<T>) => {
   let promise: Promise<T> | null = null;

@@ -32,10 +32,16 @@ export const AIComponents = ({
     },
   );
 
+  const aiBackend = import.meta.env.VITE_APP_AI_BACKEND;
+
   return (
     <>
       <DiagramToCodePlugin
         generate={async ({ frame, children, onPartial }) => {
+          if (!aiBackend) {
+            throw new Error("Taleing's AI backend is not configured.");
+          }
+
           const appState = excalidrawAPI.getAppState();
 
           // SAFETY: This should never happen, but log it just in case
@@ -63,9 +69,7 @@ export const AIComponents = ({
           const textFromFrameChildren = getTextFromElements(children);
 
           const response = await fetch(
-            `${
-              import.meta.env.VITE_APP_AI_BACKEND
-            }/v1/ai/diagram-to-code/generate-streaming`,
+            `${aiBackend}/v1/ai/diagram-to-code/generate-streaming`,
             {
               method: "POST",
               headers: {
@@ -164,12 +168,14 @@ export const AIComponents = ({
 
       <TTDDialog
         onTextSubmit={async (props) => {
+          if (!aiBackend) {
+            throw new Error("Taleing's AI backend is not configured.");
+          }
+
           const { onChunk, onStreamCreated, signal, messages } = props;
 
           const result = await TTDStreamFetch({
-            url: `${
-              import.meta.env.VITE_APP_AI_BACKEND
-            }/v1/ai/text-to-diagram/chat-streaming`,
+            url: `${aiBackend}/v1/ai/text-to-diagram/chat-streaming`,
             messages,
             onChunk,
             onStreamCreated,

@@ -139,12 +139,17 @@ const lazyChunksPlugin = (
 export default defineConfig(({ mode }) => {
   // To load .env variables
   const envVars = loadEnv(mode, `../`);
+  const base = process.env.TALEING_BASE_PATH || "/";
+  const basePrefix = base.slice(0, -1);
+  const escapeForRegex = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // mermaid (+ its many deps & per-diagram chunks) is lazy-loaded and large,
   // so we don't precache it (the app caches it once the TTD dialog is opened,
   // see `cacheMermaidChunks`). Populated at build time by `lazyChunksPlugin`.
   const mermaidChunkFileNames = new Set<string>();
   // https://vitejs.dev/config/
   return {
+    base,
     server: {
       port: Number(envVars.VITE_APP_PORT || 3000),
       // open the browser
@@ -273,9 +278,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       Sitemap({
-        hostname: "https://excalidraw.com",
+        hostname: "https://vahiela.github.io",
+        dynamicRoutes: [base],
         outDir: "build",
-        exclude: ["/404"],
+        exclude: base === "/" ? ["/404"] : ["/", "/404"],
         changefreq: "monthly",
         // its static in public folder
         generateRobotsTxt: false,
@@ -313,9 +319,10 @@ export default defineConfig(({ mode }) => {
           // network, so that unknown paths get the server's 404.
           // To add a path, add it to APP_ROUTES.
           navigateFallbackAllowlist: [
-            /^\/(\?|$)/,
+            new RegExp(`^${escapeForRegex(base)}(\\?|$)`),
             ...Object.values(APP_ROUTES).map(
-              (route) => new RegExp(`^${route}(\\?|$)`),
+              (route) =>
+                new RegExp(`^${escapeForRegex(basePrefix + route)}/?(\\?|$)`),
             ),
           ],
           // don't precache fonts, locales and separate chunks
@@ -407,10 +414,10 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 2.3 * 1024 ** 2, // 2.3MB
         },
         manifest: {
-          short_name: "Excalidraw",
-          name: "Excalidraw",
+          short_name: "Taleing",
+          name: "Taleing",
           description:
-            "Excalidraw is a whiteboard tool that lets you easily sketch diagrams that have a hand-drawn feel to them.",
+            "An open-source whiteboard from Tales Studio, based on Excalidraw.",
           icons: [
             {
               src: "android-chrome-192x192.png",
@@ -433,14 +440,14 @@ export default defineConfig(({ mode }) => {
               type: "image/png",
             },
           ],
-          start_url: "/",
-          id: "excalidraw",
+          start_url: base,
+          id: base,
           display: "standalone",
           theme_color: "#121212",
           background_color: "#ffffff",
           file_handlers: [
             {
-              action: "/",
+              action: base,
               accept: {
                 "application/vnd.excalidraw+json": [".excalidraw"],
               },
@@ -448,32 +455,32 @@ export default defineConfig(({ mode }) => {
           ],
           screenshots: [
             {
-              src: "/screenshots/virtual-whiteboard.png",
+              src: "screenshots/virtual-whiteboard.png",
               type: "image/png",
               sizes: "462x945",
             },
             {
-              src: "/screenshots/wireframe.png",
+              src: "screenshots/wireframe.png",
               type: "image/png",
               sizes: "462x945",
             },
             {
-              src: "/screenshots/illustration.png",
+              src: "screenshots/illustration.png",
               type: "image/png",
               sizes: "462x945",
             },
             {
-              src: "/screenshots/shapes.png",
+              src: "screenshots/shapes.png",
               type: "image/png",
               sizes: "462x945",
             },
             {
-              src: "/screenshots/collaboration.png",
+              src: "screenshots/collaboration.png",
               type: "image/png",
               sizes: "462x945",
             },
             {
-              src: "/screenshots/export.png",
+              src: "screenshots/export.png",
               type: "image/png",
               sizes: "462x945",
             },

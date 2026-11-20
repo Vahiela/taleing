@@ -98,6 +98,8 @@ import Collab, {
   collabAPIAtom,
   isCollaboratingAtom,
   isOfflineAtom,
+  hasCollaborationBackend,
+  COLLAB_BACKEND_UNAVAILABLE,
   userToFollowAtom,
 } from "./collab/Collab";
 import { AppFooter } from "./components/AppFooter";
@@ -112,7 +114,9 @@ import { TopErrorBoundary } from "./components/TopErrorBoundary";
 import {
   exportToBackend,
   getCollaborationLinkData,
+  hasShareBackend,
   importFromBackend,
+  SHARE_BACKEND_UNAVAILABLE,
   isCollaborationLink,
 } from "./data";
 
@@ -250,6 +254,18 @@ const initializeScene = async (opts: {
 
   let roomLinkData = getCollaborationLinkData(window.location.href);
   const isExternalScene = !!(id || jsonBackendMatch || roomLinkData);
+  const unavailableBackend =
+    jsonBackendMatch && !hasShareBackend()
+      ? SHARE_BACKEND_UNAVAILABLE
+      : roomLinkData && !hasCollaborationBackend()
+      ? COLLAB_BACKEND_UNAVAILABLE
+      : null;
+  if (unavailableBackend) {
+    window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
+    scene.appState = { ...scene.appState, errorMessage: unavailableBackend };
+    return { scene, isExternalScene: false };
+  }
+
   if (isExternalScene) {
     if (
       // don't prompt if scene is empty
@@ -283,7 +299,7 @@ const initializeScene = async (opts: {
       }
       scene.scrollToContent = true;
       if (!roomLinkData) {
-        window.history.replaceState({}, APP_NAME, window.location.origin);
+        window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
       }
     } else {
       // https://github.com/excalidraw/excalidraw/issues/1919
@@ -300,10 +316,10 @@ const initializeScene = async (opts: {
       }
 
       roomLinkData = null;
-      window.history.replaceState({}, APP_NAME, window.location.origin);
+      window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
     }
   } else if (externalUrlMatch) {
-    window.history.replaceState({}, APP_NAME, window.location.origin);
+    window.history.replaceState({}, APP_NAME, import.meta.env.BASE_URL);
 
     const url = externalUrlMatch[1];
     try {
@@ -1320,7 +1336,10 @@ const ExcalidrawWrapper = () => {
 
 const ExcalidrawApp = () => {
   const isCloudExportWindow =
-    window.location.pathname === APP_ROUTES.excalidrawPlusExport;
+    window.location.pathname.replace(/\/$/, "") ===
+    `${import.meta.env.BASE_URL.slice(0, -1)}${
+      APP_ROUTES.excalidrawPlusExport
+    }`;
   if (isCloudExportWindow) {
     return <ExcalidrawPlusIframeExport />;
   }

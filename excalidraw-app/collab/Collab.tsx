@@ -77,6 +77,7 @@ import {
 import { FileStatusStore } from "../data/fileStatusStore";
 import { LocalData } from "../data/LocalData";
 import {
+  isFirebaseConfigured,
   isSavedToFirebase,
   loadFilesFromFirebase,
   loadFromFirebase,
@@ -117,6 +118,12 @@ export const activeRoomLinkAtom = atom<string | null>(null);
 export const userToFollowAtom = atom<UserToFollow | null>(null);
 
 type CollabInstance = InstanceType<typeof Collab>;
+
+export const hasCollaborationBackend = () =>
+  Boolean(import.meta.env.VITE_APP_WS_SERVER_URL) && isFirebaseConfigured();
+
+export const COLLAB_BACKEND_UNAVAILABLE =
+  "Live collaboration is unavailable until Taleing's collaboration backend is configured.";
 
 export interface CollabAPI {
   /** function so that we can access the latest value from stale callbacks */
@@ -400,7 +407,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       // that could have been saved in other tabs while we were collaborating
       resetBrowserStateVersions();
 
-      window.history.pushState({}, APP_NAME, window.location.origin);
+      window.history.pushState({}, APP_NAME, import.meta.env.BASE_URL);
       this.destroySocketClient();
 
       LocalData.fileStorage.reset();
@@ -492,6 +499,11 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   startCollaboration = async (
     existingRoomLinkData: null | { roomId: string; roomKey: string },
   ) => {
+    if (!hasCollaborationBackend()) {
+      this.setErrorDialog(COLLAB_BACKEND_UNAVAILABLE);
+      return null;
+    }
+
     if (!this.state.username) {
       import("@excalidraw/random-username").then(({ getRandomUsername }) => {
         const username = getRandomUsername();

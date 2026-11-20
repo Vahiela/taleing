@@ -36,7 +36,7 @@ import {
 } from "../app_constants";
 
 import { encodeFilesForUpload } from "./FileManager";
-import { saveFilesToFirebase } from "./firebase";
+import { isFirebaseConfigured, saveFilesToFirebase } from "./firebase";
 
 import type { WS_SUBTYPES } from "../app_constants";
 
@@ -64,6 +64,12 @@ export const getSyncableElements = (
 
 const BACKEND_V2_GET = import.meta.env.VITE_APP_BACKEND_V2_GET_URL;
 const BACKEND_V2_POST = import.meta.env.VITE_APP_BACKEND_V2_POST_URL;
+
+export const hasShareBackend = () =>
+  Boolean(BACKEND_V2_GET && BACKEND_V2_POST) && isFirebaseConfigured();
+
+export const SHARE_BACKEND_UNAVAILABLE =
+  "Shareable links are unavailable until Taleing's sharing backend is configured.";
 
 const generateRoomId = async () => {
   const buffer = new Uint8Array(ROOM_ID_BYTES);
@@ -250,6 +256,10 @@ export const exportToBackend = async (
   appState: Partial<AppState>,
   files: BinaryFiles,
 ): Promise<ExportToBackendResult> => {
+  if (!hasShareBackend()) {
+    return { url: null, errorMessage: SHARE_BACKEND_UNAVAILABLE };
+  }
+
   const encryptionKey = await generateEncryptionKey("string");
 
   const payload = await compressData(

@@ -44,6 +44,7 @@ vi.mock("../../excalidraw-app/data/firebase.ts", () => {
     loadFromFirebase,
     saveToFirebase,
     isSavedToFirebase,
+    isFirebaseConfigured: () => true,
     loadFilesFromFirebase,
     saveFilesToFirebase,
   };
@@ -69,6 +70,9 @@ vi.mock("socket.io-client", () => {
  * i.e. multiplayer history tests could be a good first candidate, as we could test both history stacks simultaneously.
  */
 describe("collaboration", () => {
+  beforeEach(() => vi.stubEnv("VITE_APP_WS_SERVER_URL", "https://collab.test"));
+  afterEach(() => vi.unstubAllEnvs());
+
   it("should emit two ephemeral increments even though updates get batched", async () => {
     const durableIncrements: DurableIncrement[] = [];
     const ephemeralIncrements: EphemeralIncrement[] = [];
