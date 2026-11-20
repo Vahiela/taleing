@@ -124,6 +124,18 @@ const findPartsForData = (data: any, parts: string[]) => {
   return data;
 };
 
+const brandedEditorLabels = new Set([
+  "alerts.uploadedSecurly",
+  "labels.addWatermark",
+  "labels.excalidrawLib",
+  "labels.installPWA",
+  "labels.madeWithExcalidraw",
+  "mermaid.description",
+  "mermaid.title",
+  "roomDialog.shareTitle",
+  "toolBar.mermaidToExcalidraw",
+]);
+
 export const t = (
   path: NestedKeyOf<typeof fallbackLangData>,
   replacement?: { [key: string]: string | number } | null,
@@ -149,6 +161,10 @@ export const t = (
       return "";
     }
     throw new Error(errorMessage);
+  }
+
+  if (brandedEditorLabels.has(path)) {
+    translation = translation.replaceAll("Excalidraw", "Taleing");
   }
 
   if (replacement) {
